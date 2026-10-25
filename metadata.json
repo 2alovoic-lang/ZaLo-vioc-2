@@ -1,0 +1,6 @@
+{
+  "name": "ZaLo Voici",
+  "description": "Trải nghiệm ZaLo Voici Web - Nhắn tin siêu tốc, gọi thoại và video HD, chia sẻ khoảnh khắc Nhật ký, lưu trữ Cloud của tôi và kết nối bạn bè.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
