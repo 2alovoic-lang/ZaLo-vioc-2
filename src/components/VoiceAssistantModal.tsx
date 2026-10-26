@@ -1,0 +1,346 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Mic,
+  MicOff,
+  Send,
+  X,
+  Volume2,
+  VolumeX,
+  Sparkles,
+  Bot,
+  ArrowRight,
+  ShieldCheck,
+  Compass,
+} from 'lucide-react';
+import { AssistantInteraction } from '../types/algeria';
+
+interface VoiceAssistantModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigateToTab: (tab: string, params?: any) => void;
+  currentWilaya: string;
+}
+
+export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
+  isOpen,
+  onClose,
+  onNavigateToTab,
+  currentWilaya,
+}) => {
+  const [messages, setMessages] = useState<AssistantInteraction[]>([
+    {
+      id: 'init_1',
+      sender: 'assistant',
+      text: 'أهلاً بك في ZaLoVoice! أنا مساعدك الصوتي الذكي والشامل. كيف يمكنني مساعدتك؟ (بحث أكاديمي، استئجار أو شراء سكن، طلب طاكسي، تسوق وتجارة، مطاعم، أو حجوزات).',
+      speechText: 'أهلاً بك في زالو فويس، أنا في خدمتك لأي طلب صوتي أو كتابي.',
+      timestamp: 'الآن',
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [voiceSpeechEnabled, setVoiceSpeechEnabled] = useState(true);
+
+  const recognitionRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Web Speech API for voice recognition
+  useEffect(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'ar-DZ'; // Algerian Arabic
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInputText(transcript);
+        setIsListening(false);
+        handleSendMessage(transcript);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isOpen, messages]);
+
+  if (!isOpen) return null;
+
+  // Text-to-speech speaker
+  const speakText = (text: string) => {
+    if (!voiceSpeechEnabled || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ar-XA';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Ignored
+    }
+  };
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert('ميزة التعرف الصوتي غير مدعومة في هذا المتصفح، يرجى كتابة الرسالة نصياً.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
+    }
+  };
+
+  const handleSendMessage = async (textToSend?: string) => {
+    const query = (textToSend || inputText).trim();
+    if (!query || isLoading) return;
+
+    const userMsg: AssistantInteraction = {
+      id: `usr_${Date.now()}`,
+      sender: 'user',
+      text: query,
+      timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: query,
+          context: { currentWilaya },
+          language: 'ar',
+        }),
+      });
+
+      const data = await response.json();
+
+      const assistantMsg: AssistantInteraction = {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        text: data.reply || 'تمت معالجة طلبك بنجاح.',
+        speechText: data.speechText || data.reply,
+        timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
+        intent: data.intent,
+        isLiveAi: data.isAiLive,
+        actionData: {
+          wilaya: data.parameters?.wilaya,
+          targetTab: data.targetTab,
+        },
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      // Speak assistant answer
+      if (assistantMsg.speechText) {
+        speakText(assistantMsg.speechText);
+      }
+    } catch {
+      const errorMsg: AssistantInteraction = {
+        id: `err_${Date.now()}`,
+        sender: 'assistant',
+        text: 'عذراً، حدث خطأ أثناء الاتصال بالمساعد. جرب مرة أخرى أو اختر القسم من القائمة.',
+        timestamp: 'الآن',
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[600px] max-h-[90vh]">
+        {/* Top Header */}
+        <div className="px-5 py-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-600 to-blue-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-white text-sm">مساعد ZaLoVoice الصوتي</h3>
+                <span className="flex items-center gap-1 text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  <span>AI عالمي وجزائري</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">يفهم الدارجة الجزائرية، العربية الفصحى، الإنجليزية والفرنسية</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setVoiceSpeechEnabled(!voiceSpeechEnabled)}
+              className={`p-2 rounded-xl text-xs transition-colors ${
+                voiceSpeechEnabled ? 'text-sky-400 bg-sky-500/10' : 'text-slate-500 hover:text-slate-300'
+              }`}
+              title={voiceSpeechEnabled ? 'كتم الصوت' : 'تشغيل النطق الصوتي'}
+            >
+              {voiceSpeechEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Messages Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-950/40">
+          {messages.map((m) => {
+            const isAsst = m.sender === 'assistant';
+
+            return (
+              <div
+                key={m.id}
+                className={`flex flex-col ${isAsst ? 'items-start' : 'items-end'}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                    isAsst
+                      ? 'bg-slate-800/90 text-slate-100 border border-slate-700/60 rounded-tl-sm'
+                      : 'bg-sky-600 text-white rounded-tr-sm shadow-xs'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{m.text}</p>
+
+                  {/* Intent & Context Action Buttons */}
+                  {isAsst && m.actionData?.targetTab && m.actionData.targetTab !== 'assistant' && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => {
+                          onNavigateToTab(m.actionData!.targetTab!, m.actionData);
+                          onClose();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-[11px] font-semibold transition-colors cursor-pointer border border-sky-500/30"
+                      >
+                        <Compass className="w-3.5 h-3.5" />
+                        <span>فتح قسم {m.intent || 'الخدمة'}</span>
+                        <ArrowRight className="w-3 h-3 rotate-180" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2 mt-1.5 text-[10px] text-slate-400">
+                    <span>{m.timestamp}</span>
+                    {isAsst && (
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                        <span>{m.isLiveAi ? 'Gemini 3.8 Flash' : 'NLP محلي'}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {isLoading && (
+            <div className="flex items-center gap-2 text-xs text-sky-400 p-2 bg-slate-900/60 rounded-xl w-fit">
+              <div className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+              <span>جاري التفكير وتحليل طلبك...</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="px-4 py-2 bg-slate-900/90 border-t border-slate-800/80 flex gap-2 overflow-x-auto text-[11px]">
+          {[
+            'اشرح لي قانون نيوتن الثاني مع المعادلات',
+            'خدمات أخرى ومستقبلية في ZaLoVoice',
+            'صيدليات الحراسة وتوفر الأدوية',
+            'ابحث لي عن شقة للكراء في وهران',
+            'كاش طاكسي من المطار لوسط الجزائر؟',
+            'ما هي مراحل الثورة التحريرية الجزائرية؟',
+            'بغيت نشري هاتف سامسونغ أصلي',
+            'كاش مطعم شخشوخة في بسكرة؟',
+            'حجز موعد عند طبيب عام',
+          ].map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => handleSendMessage(prompt)}
+              className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 whitespace-nowrap transition-colors border border-slate-700/50 shrink-0 cursor-pointer"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+
+        {/* Input & Voice Controls */}
+        <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+          {/* Animated Mic Button */}
+          <button
+            onClick={toggleListening}
+            className={`relative p-3 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+              isListening
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 scale-105'
+                : 'bg-slate-800 hover:bg-slate-700 text-sky-400'
+            }`}
+            title={isListening ? 'جارٍ الاستماع... اضغط للإيقاف' : 'اضغط للتحدث صوتياً'}
+          >
+            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            {isListening && (
+              <span className="absolute -inset-1 rounded-2xl border border-rose-500 animate-pulse-ring pointer-events-none" />
+            )}
+          </button>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex-1 flex items-center gap-2"
+          >
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder={isListening ? 'أنا أستمع إليك الآن...' : 'تحدث بالدارجة أو اكتب طلبك هنا...'}
+              className="flex-1 px-4 py-2.5 text-xs bg-slate-800/90 text-white rounded-xl border border-slate-700/80 focus:outline-none focus:border-sky-500 placeholder-slate-400"
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isLoading}
+              className="p-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white shadow-md transition-colors cursor-pointer"
+            >
+              <Send className="w-4 h-4 rotate-180" />
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
