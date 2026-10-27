@@ -136,7 +136,7 @@ export interface AssistantInteraction {
   text: string;
   speechText?: string;
   timestamp: string;
-  intent?: 'commerce' | 'real_estate' | 'taxi' | 'food' | 'booking' | 'academic' | 'search' | 'chat';
+  intent?: 'commerce' | 'real_estate' | 'taxi' | 'food' | 'booking' | 'academic' | 'search' | 'chat' | 'more_services';
   isLiveAi?: boolean;
   actionData?: {
     wilaya?: string;

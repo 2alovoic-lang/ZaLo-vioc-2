@@ -13,12 +13,15 @@ import {
   Compass,
 } from 'lucide-react';
 import { AssistantInteraction } from '../types/algeria';
+import { processLocalNLP } from '../utils/localAssistantNLP';
+import { speakWithFullVoice, stopSpeaking } from '../utils/speechManager';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigateToTab: (tab: string, params?: any) => void;
   currentWilaya: string;
+  initialQuery?: string;
 }
 
 export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
@@ -26,6 +29,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   onClose,
   onNavigateToTab,
   currentWilaya,
+  initialQuery,
 }) => {
   const [messages, setMessages] = useState<AssistantInteraction[]>([
     {
@@ -43,6 +47,23 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const processedInitialQueryRef = useRef<string | null>(null);
+
+  // Stop speech when closing modal
+  useEffect(() => {
+    if (!isOpen) {
+      stopSpeaking();
+      processedInitialQueryRef.current = null;
+    }
+  }, [isOpen]);
+
+  // Process initial query if opened with one
+  useEffect(() => {
+    if (isOpen && initialQuery && initialQuery.trim() && processedInitialQueryRef.current !== initialQuery) {
+      processedInitialQueryRef.current = initialQuery;
+      handleSendMessage(initialQuery.trim());
+    }
+  }, [isOpen, initialQuery]);
 
   // Initialize Web Speech API for voice recognition
   useEffect(() => {
@@ -82,18 +103,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Text-to-speech speaker
+  // Text-to-speech speaker using persistent, un-truncated voice engine
   const speakText = (text: string) => {
-    if (!voiceSpeechEnabled || !window.speechSynthesis) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-XA';
-      utterance.rate = 1.0;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // Ignored
-    }
+    if (!voiceSpeechEnabled) return;
+    speakWithFullVoice(text, { lang: 'ar' });
   };
 
   const toggleListening = () => {
@@ -131,17 +144,32 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: query,
-          context: { currentWilaya },
-          language: 'ar',
-        }),
-      });
+      let data: any = null;
 
-      const data = await response.json();
+      // 1. Attempt server-side API call if running in fullstack dev/server mode
+      try {
+        const response = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: query,
+            context: { currentWilaya },
+            language: 'ar',
+          }),
+        });
+
+        if (response.ok) {
+          data = await response.json();
+        }
+      } catch {
+        // Network or 404 error (e.g., deployed statically on GitHub Pages or Vercel static)
+        data = null;
+      }
+
+      // 2. Seamless Client-Side NLP fallback: guaranteed to respond with genuine Algerian content
+      if (!data || !data.reply) {
+        data = processLocalNLP(query, currentWilaya);
+      }
 
       const assistantMsg: AssistantInteraction = {
         id: `asst_${Date.now()}`,
@@ -150,27 +178,39 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         speechText: data.speechText || data.reply,
         timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
         intent: data.intent,
-        isLiveAi: data.isAiLive,
+        isLiveAi: data.isAiLive || false,
         actionData: {
-          wilaya: data.parameters?.wilaya,
+          wilaya: data.parameters?.wilaya || currentWilaya,
           targetTab: data.targetTab,
         },
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Speak assistant answer
-      if (assistantMsg.speechText) {
+      // Speak assistant answer with full uninterrupted speech
+      if (assistantMsg.speechText && voiceSpeechEnabled) {
         speakText(assistantMsg.speechText);
       }
     } catch {
-      const errorMsg: AssistantInteraction = {
-        id: `err_${Date.now()}`,
+      // Emergency safe local fallback - never show connection error
+      const localFallback = processLocalNLP(query, currentWilaya);
+      const fallbackMsg: AssistantInteraction = {
+        id: `asst_${Date.now()}`,
         sender: 'assistant',
-        text: 'عذراً، حدث خطأ أثناء الاتصال بالمساعد. جرب مرة أخرى أو اختر القسم من القائمة.',
+        text: localFallback.reply,
+        speechText: localFallback.speechText,
         timestamp: 'الآن',
+        intent: localFallback.intent,
+        isLiveAi: false,
+        actionData: {
+          wilaya: currentWilaya,
+          targetTab: localFallback.targetTab,
+        },
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, fallbackMsg]);
+      if (voiceSpeechEnabled && fallbackMsg.speechText) {
+        speakText(fallbackMsg.speechText);
+      }
     } finally {
       setIsLoading(false);
     }

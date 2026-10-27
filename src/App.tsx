@@ -63,6 +63,7 @@ import { RestaurantsSection } from './components/RestaurantsSection';
 import { BookingsSection } from './components/BookingsSection';
 import { IntegrationStatusModal } from './components/IntegrationStatusModal';
 import { MoreServicesSection } from './components/MoreServicesSection';
+import { speakWithFullVoice, stopSpeaking } from './utils/speechManager';
 
 // Icons
 import {
@@ -138,6 +139,7 @@ export default function App() {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState(false);
   const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
+  const [pendingAssistantQuery, setPendingAssistantQuery] = useState('');
   const [isIntegrationModalOpen, setIsIntegrationModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
@@ -307,19 +309,13 @@ export default function App() {
     localStorage.setItem('zalovoice_messages', JSON.stringify(messages));
   }, [messages]);
 
-  // Web Speech Synthesis (TTS) Helper
+  // Web Speech Synthesis (TTS) Helper using robust persistent voice engine
   const speakVoice = (text: string) => {
-    if (!window.speechSynthesis) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = user.language === 'en' ? 'en-US' : user.language === 'fr' ? 'fr-FR' : 'ar-XA';
-      utterance.rate = accessibilitySettings.speechRate || 1.0;
-      utterance.pitch = accessibilitySettings.speechPitch || 1.0;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // Ignored
-    }
+    speakWithFullVoice(text, {
+      lang: user.language === 'en' ? 'en' : user.language === 'fr' ? 'fr' : 'ar',
+      rate: accessibilitySettings.speechRate || 1.0,
+      pitch: accessibilitySettings.speechPitch || 1.0,
+    });
   };
 
   // Announce to Screen Readers (TalkBack / NVDA) + optional audio read
@@ -381,9 +377,10 @@ export default function App() {
     }
   };
 
-  // Process voice query from home view
+  // Process voice or text query from home view
   const handleVoiceQuery = (queryText: string) => {
     if (!queryText.trim()) return;
+    setPendingAssistantQuery(queryText.trim());
     setIsVoiceAssistantOpen(true);
   };
 
@@ -1122,9 +1119,13 @@ export default function App() {
       {/* Voice Assistant Modal */}
       <VoiceAssistantModal
         isOpen={isVoiceAssistantOpen}
-        onClose={() => setIsVoiceAssistantOpen(false)}
+        onClose={() => {
+          setIsVoiceAssistantOpen(false);
+          setPendingAssistantQuery('');
+        }}
         onNavigateToTab={handleAssistantNavigate}
         currentWilaya={currentWilaya}
+        initialQuery={pendingAssistantQuery}
       />
 
       {/* Integration & Database Diagnostics Modal */}
