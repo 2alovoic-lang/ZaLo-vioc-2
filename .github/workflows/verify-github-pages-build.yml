@@ -1,0 +1,47 @@
+name: Verify GitHub Pages build
+
+on:
+  push:
+    branches:
+      - fix/github-pages-npm-cache
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+      - 'src/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-build-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build application
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -s dist/index.html
+          test -d dist/assets
+          echo "Build output exists and contains assets."
