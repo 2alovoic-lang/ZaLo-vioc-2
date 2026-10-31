@@ -187,23 +187,62 @@ export const processLocalNLP = (
   }
 
   // 6. Real Estate (العقارات والسكن)
+  // Explicit Command: Open Messages / Chat (افتح الرسائل / المحادثات / الشات)
+  if (
+    lower.includes('افتح الرسائل') ||
+    lower.includes('افتح المحادثات') ||
+    lower.includes('افتح الشات') ||
+    lower.includes('الرسائل') ||
+    lower.includes('المحادثات') ||
+    lower.includes('ميساجات') ||
+    lower.includes('open messages') ||
+    lower.includes('open chat')
+  ) {
+    return {
+      intent: 'chat',
+      reply: 'قمت بفتح قسم المحادثات والرسائل بناءً على طلبك. يمكنك الآن التواصل ومراسلة جهات اتصالك ومجموعاتك.',
+      speechText: 'فتحت لك قسم المحادثات والرسائل.',
+      actionType: 'navigate_to_tab',
+      targetTab: 'chat' as any,
+      parameters: { wilaya },
+      isAiLive: false,
+      provider: 'محرك ZaLoVoice الذكي المدمج',
+    };
+  }
+
+  // 6. Real Estate (العقارات والسكن - كراء وشراء)
   if (
     lower.includes('كراء') ||
+    lower.includes('شراء عقار') ||
+    lower.includes('شراء منزل') ||
+    lower.includes('شراء شقة') ||
+    lower.includes('عقار') ||
+    lower.includes('عقارات') ||
     lower.includes('دار') ||
     lower.includes('شقة') ||
     lower.includes('سكن') ||
-    lower.includes('عقار') ||
+    lower.includes('فيلا') ||
     lower.includes('louer') ||
     lower.includes('appartement') ||
-    lower.includes('maison')
+    lower.includes('maison') ||
+    lower.includes('immobilier')
   ) {
+    const isBuying = lower.includes('شراء') || lower.includes('نشري') || lower.includes('بيع') || lower.includes('achat');
     return {
       intent: 'real_estate',
-      reply: `مرحباً بك! قمت بفتح قسم العقارات والسكن في ${wilaya}. ستجد شققاً للإيجار (F2، F3، F4)، ومنازل للبيع بأسعار موثقة بالدينار الجزائري وتواصل مباشر مع أصحاب العقارات.`,
-      speechText: `فتحت لك عروض العقارات والشقق المتوفرة في ${wilaya}.`,
+      reply: isBuying
+        ? `مرحباً بك! قمت بفتح قسم شراء العقارات والمنازل في ${wilaya}. ستجد خيارات متنوعة للشقق والفيلات المعروضة للبيع مع تفاصيل المساحة والأسعار.`
+        : `مرحباً بك! قمت بفتح قسم العقارات والسكن في ${wilaya}. ستجد شققاً للإيجار (F2، F3، F4)، ومنازل للبيع بأسعار موثقة بالدينار الجزائري وتواصل مباشر مع أصحاب العقارات.`,
+      speechText: isBuying
+        ? `فتحت لك عروض شراء العقارات والمنازل في ${wilaya}.`
+        : `فتحت لك عروض العقارات والشقق المتوفرة في ${wilaya}.`,
       actionType: 'navigate_to_tab',
       targetTab: 'real_estate',
-      parameters: { wilaya, searchQuery: 'شقة للكراء' },
+      parameters: {
+        wilaya,
+        searchQuery: isBuying ? 'شراء عقار' : 'شقة للكراء',
+        subject: isBuying ? 'شراء' : 'كراء',
+      },
       isAiLive: false,
       provider: 'محرك ZaLoVoice الذكي المدمج',
     };

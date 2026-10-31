@@ -63,7 +63,7 @@ import { RestaurantsSection } from './components/RestaurantsSection';
 import { BookingsSection } from './components/BookingsSection';
 import { IntegrationStatusModal } from './components/IntegrationStatusModal';
 import { MoreServicesSection } from './components/MoreServicesSection';
-import { speakWithFullVoice, stopSpeaking } from './utils/speechManager';
+import { speakWithFullVoice, stopSpeaking, unlockAudio } from './utils/speechManager';
 
 // Icons
 import {
@@ -82,6 +82,9 @@ import {
   Volume2,
   Trash2,
   Mic,
+  MessageCircle,
+  LayoutGrid,
+  MessageSquareMore,
 } from 'lucide-react';
 
 export default function App() {
@@ -368,6 +371,7 @@ export default function App() {
       announceToScreenReader('تم إيقاف الاستماع.');
     } else {
       try {
+        stopSpeaking();
         recognitionRef.current.start();
         setIsListening(true);
         announceToScreenReader('أنا أستمع إليك الآن، تفضل بالتحدث.');
@@ -397,11 +401,18 @@ export default function App() {
   };
 
   // Navigation from Home Service Grid & Drawer
-  const handleSelectService = (service: 'home' | 'academic' | 'commerce' | 'real_estate' | 'taxi' | 'food' | 'bookings' | 'chat' | 'more_services') => {
+  const handleSelectService = (
+    service: 'home' | 'academic' | 'commerce' | 'real_estate' | 'taxi' | 'food' | 'bookings' | 'chat' | 'more_services',
+    forceAnnounce: boolean = false
+  ) => {
     setCurrentServiceTab(service);
+    const isSpeaking = typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking;
+
     if (service === 'home') {
       setBottomNavTab('home');
-      announceToScreenReader('أنت الآن في الصفحة الرئيسية لتطبيق ZaLoVoice.');
+      if (!isSpeaking || forceAnnounce) {
+        announceToScreenReader('أنت الآن في الصفحة الرئيسية لتطبيق ZaLoVoice.');
+      }
     } else {
       setBottomNavTab('explore');
       const serviceNames: Record<string, string> = {
@@ -414,7 +425,9 @@ export default function App() {
         chat: 'الرسائل والمحادثات',
         more_services: 'خدمات أخرى ومستقبلية',
       };
-      announceToScreenReader(`تم فتح قسم ${serviceNames[service] || service}`);
+      if (!isSpeaking || forceAnnounce) {
+        announceToScreenReader(`تم فتح قسم ${serviceNames[service] || service}`);
+      }
     }
   };
 
@@ -863,7 +876,10 @@ export default function App() {
         {currentServiceTab !== 'home' && (
           <div className="absolute bottom-20 left-4 z-40">
             <button
-              onClick={() => setIsVoiceAssistantOpen(true)}
+              onClick={() => {
+                unlockAudio();
+                setIsVoiceAssistantOpen(true);
+              }}
               className="w-13 h-13 rounded-full bg-gradient-to-tr from-cyan-400 via-teal-300 to-sky-400 text-slate-950 flex items-center justify-center shadow-xl shadow-cyan-500/40 hover:scale-110 active:scale-95 transition-all cursor-pointer border-2 border-white/60 font-bold"
               title="تحدث مع مساعد ZaLoVoice"
               aria-label="تحدث مع مساعد ZaLoVoice"
@@ -873,9 +889,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Bottom Android Navigation Bar (Matching Mockup: الرئيسية, استكشاف, المفضلة, الإشعارات, حسابي) */}
+        {/* Floating Glass Dock Bottom Navigation Bar (Exact Match with Reference Mockup) */}
         <nav
-          className="h-16 bg-[#061722]/95 border-t border-cyan-500/20 px-3 flex items-center justify-around shrink-0 z-30 text-[11px] font-medium backdrop-blur-xl shadow-2xl shadow-cyan-950/60"
+          className="absolute bottom-2.5 inset-x-3 h-[68px] bg-[#031326]/85 backdrop-blur-xl border border-cyan-500/25 rounded-[32px] px-2 flex items-center justify-around z-30 text-[11px] font-medium shadow-[0_10px_35px_rgba(0,10,30,0.85),0_0_20px_rgba(0,229,255,0.12)]"
           role="navigation"
           aria-label="شريط التنقل السفلي"
         >
@@ -885,87 +901,156 @@ export default function App() {
               handleSelectService('home');
               setBottomNavTab('home');
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-              currentServiceTab === 'home' && bottomNavTab === 'home'
-                ? 'text-cyan-300 font-black scale-105 bg-cyan-950/60 border border-cyan-500/30 shadow-xs'
-                : 'text-cyan-200/60 hover:text-white'
-            }`}
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer group"
             aria-label="الرئيسية"
           >
-            <Home className="w-5 h-5" />
-            <span>الرئيسية</span>
+            <Home
+              className={`w-6 h-6 transition-all duration-200 ${
+                currentServiceTab === 'home' && bottomNavTab === 'home'
+                  ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'
+              }`}
+            />
+            <span
+              className={`text-[11px] transition-colors ${
+                currentServiceTab === 'home' && bottomNavTab === 'home'
+                  ? 'text-[#00e5ff] font-bold drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200'
+              }`}
+            >
+              الرئيسية
+            </span>
+            {currentServiceTab === 'home' && bottomNavTab === 'home' && (
+              <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
+            )}
           </button>
 
-          {/* 2. استكشاف (Explore) */}
+          {/* 2. الخدمات (Services) */}
           <button
             onClick={() => {
               handleSelectService('more_services');
               setBottomNavTab('explore');
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-              currentServiceTab === 'more_services' && bottomNavTab === 'explore'
-                ? 'text-cyan-300 font-black scale-105 bg-cyan-950/60 border border-cyan-500/30 shadow-xs'
-                : 'text-cyan-200/60 hover:text-white'
-            }`}
-            aria-label="استكشاف كافة الخدمات"
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer group"
+            aria-label="الخدمات"
           >
-            <Compass className="w-5 h-5" />
-            <span>استكشاف</span>
-          </button>
-
-          {/* 3. المفضلة (Favorites) */}
-          <button
-            onClick={() => {
-              setBottomNavTab('favorites');
-              setIsFavoritesOpen(true);
-              announceToScreenReader(`قائمة المفضلة، تحتوي على ${favorites.length} عناصر محفوظة.`);
-            }}
-            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
-              bottomNavTab === 'favorites' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-            aria-label={`المفضلة (${favorites.length} عناصر)`}
-          >
-            <Star className="w-5 h-5" />
-            <span>المفضلة</span>
-            {favorites.length > 0 && (
-              <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-amber-400" />
+            <LayoutGrid
+              className={`w-6 h-6 transition-all duration-200 ${
+                currentServiceTab === 'more_services' && bottomNavTab === 'explore'
+                  ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'
+              }`}
+            />
+            <span
+              className={`text-[11px] transition-colors ${
+                currentServiceTab === 'more_services' && bottomNavTab === 'explore'
+                  ? 'text-[#00e5ff] font-bold drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200'
+              }`}
+            >
+              الخدمات
+            </span>
+            {currentServiceTab === 'more_services' && bottomNavTab === 'explore' && (
+              <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
             )}
           </button>
 
-          {/* 4. الإشعارات (Notifications) */}
+          {/* 3. المحادثات (Chats) */}
+          <button
+            onClick={() => {
+              handleSelectService('chat');
+              setBottomNavTab('messages' as any);
+              announceToScreenReader('قسم المحادثات والرسائل');
+            }}
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer group"
+            aria-label="المحادثات"
+          >
+            <MessageSquareMore
+              className={`w-6 h-6 transition-all duration-200 ${
+                currentServiceTab === 'chat'
+                  ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'
+              }`}
+            />
+            <span
+              className={`text-[11px] transition-colors ${
+                currentServiceTab === 'chat'
+                  ? 'text-[#00e5ff] font-bold drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200'
+              }`}
+            >
+              المحادثات
+            </span>
+            {currentServiceTab === 'chat' && (
+              <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
+            )}
+          </button>
+
+          {/* 4. الإخطارات (Notifications with distinct Red Dot) */}
           <button
             onClick={() => {
               setBottomNavTab('notifications');
               setIsNotificationsOpen(true);
               const unread = notifications.filter((n) => !n.read).length;
-              announceToScreenReader(`قائمة الإشعارات، لديك ${unread} إشعارات جديدة غير مقروءة.`);
+              announceToScreenReader(`قائمة الإخطارات، لديك ${unread} إخطارات جديدة غير مقروءة.`);
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
-              bottomNavTab === 'notifications' ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-            aria-label="الإشعارات"
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer group relative"
+            aria-label="الإخطارات"
           >
-            <Bell className="w-5 h-5" />
-            <span>الإشعارات</span>
-            {notifications.some((n) => !n.read) && (
-              <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <div className="relative">
+              <Bell
+                className={`w-6 h-6 transition-all duration-200 ${
+                  bottomNavTab === 'notifications'
+                    ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]'
+                    : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'
+                }`}
+              />
+              {/* Solid Red Dot matching screenshot */}
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#ff334b] shadow-[0_0_6px_#ff334b]" />
+            </div>
+            <span
+              className={`text-[11px] transition-colors ${
+                bottomNavTab === 'notifications'
+                  ? 'text-[#00e5ff] font-bold drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200'
+              }`}
+            >
+              الإخطارات
+            </span>
+            {bottomNavTab === 'notifications' && (
+              <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
             )}
           </button>
 
-          {/* 5. حسابي (My Account) */}
+          {/* 5. الملف (Profile) */}
           <button
             onClick={() => {
               setBottomNavTab('account');
               setIsSettingsOpen(true);
-              announceToScreenReader('إعدادات الملف الشخصي والحساب مفتوحة.');
+              announceToScreenReader('الملف الشخصي وإعدادات المظهر');
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-              bottomNavTab === 'account' ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-            aria-label="حسابي والملف الشخصي"
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer group"
+            aria-label="الملف الشخصي"
           >
-            <User className="w-5 h-5" />
-            <span>حسابي</span>
+            <User
+              className={`w-6 h-6 transition-all duration-200 ${
+                bottomNavTab === 'account'
+                  ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'
+              }`}
+            />
+            <span
+              className={`text-[11px] transition-colors ${
+                bottomNavTab === 'account'
+                  ? 'text-[#00e5ff] font-bold drop-shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'text-[#7d99b3] group-hover:text-cyan-200'
+              }`}
+            >
+              الملف
+            </span>
+            {bottomNavTab === 'account' && (
+              <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
+            )}
           </button>
         </nav>
       </div>

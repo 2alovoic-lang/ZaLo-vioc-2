@@ -44,24 +44,42 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [voiceSpeechEnabled, setVoiceSpeechEnabled] = useState(true);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedInitialQueryRef = useRef<string | null>(null);
+  const autoNavigateTimerRef = useRef<any>(null);
 
-  // Stop speech when closing modal
+  // Stop speech and clear timers when closing modal or unmounting
   useEffect(() => {
     if (!isOpen) {
       stopSpeaking();
       processedInitialQueryRef.current = null;
+      if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
+      }
     }
+    return () => {
+      stopSpeaking();
+      if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
+      }
+    };
   }, [isOpen]);
 
-  // Process initial query if opened with one
+  // Process initial query if opened with one, or speak welcome greeting
   useEffect(() => {
-    if (isOpen && initialQuery && initialQuery.trim() && processedInitialQueryRef.current !== initialQuery) {
-      processedInitialQueryRef.current = initialQuery;
-      handleSendMessage(initialQuery.trim());
+    if (isOpen) {
+      if (initialQuery && initialQuery.trim() && processedInitialQueryRef.current !== initialQuery) {
+        processedInitialQueryRef.current = initialQuery;
+        handleSendMessage(initialQuery.trim());
+      } else if (!initialQuery || !initialQuery.trim()) {
+        // Speak initial greeting aloud in clear Arabic
+        speakText('أهلاً بك في زالو فويس، أنا في خدمتك لأي طلب صوتي أو كتابي.');
+      }
     }
   }, [isOpen, initialQuery]);
 
@@ -111,7 +129,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('ميزة التعرف الصوتي غير مدعومة في هذا المتصفح، يرجى كتابة الرسالة نصياً.');
+      setNoticeMessage('التعرف الصوتي غير مدعوم في هذا المتصفح، يمكنك كتابة رسالتك في الحقل أدناه.');
+      setTimeout(() => setNoticeMessage(null), 4000);
       return;
     }
 
@@ -120,6 +139,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       setIsListening(false);
     } else {
       try {
+        // Interruption: instantly silence assistant when user speaks
+        stopSpeaking();
         recognitionRef.current.start();
         setIsListening(true);
       } catch {
@@ -131,6 +152,9 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputText).trim();
     if (!query || isLoading) return;
+
+    // Interruption: stop ongoing assistant speech on message submission
+    stopSpeaking();
 
     const userMsg: AssistantInteraction = {
       id: `usr_${Date.now()}`,
@@ -191,6 +215,17 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       if (assistantMsg.speechText && voiceSpeechEnabled) {
         speakText(assistantMsg.speechText);
       }
+
+      // Automatically execute detected navigation command (e.g. "افتح الرسائل", "اريد شراء عقار")
+      if (data.actionType === 'navigate_to_tab' && data.targetTab && data.targetTab !== 'home' && data.targetTab !== 'assistant') {
+        const destTab = data.targetTab;
+        const navParams = data.parameters || { wilaya: currentWilaya };
+        if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
+        autoNavigateTimerRef.current = setTimeout(() => {
+          onNavigateToTab(destTab, navParams);
+          onClose();
+        }, 1300);
+      }
     } catch {
       // Emergency safe local fallback - never show connection error
       const localFallback = processLocalNLP(query, currentWilaya);
@@ -210,6 +245,17 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       setMessages((prev) => [...prev, fallbackMsg]);
       if (voiceSpeechEnabled && fallbackMsg.speechText) {
         speakText(fallbackMsg.speechText);
+      }
+
+      // Automatically execute detected command in fallback mode as well
+      if (localFallback.actionType === 'navigate_to_tab' && localFallback.targetTab && (localFallback.targetTab as string) !== 'home') {
+        const destTab = localFallback.targetTab;
+        const navParams = localFallback.parameters || { wilaya: currentWilaya };
+        if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
+        autoNavigateTimerRef.current = setTimeout(() => {
+          onNavigateToTab(destTab, navParams);
+          onClose();
+        }, 1300);
       }
     } finally {
       setIsLoading(false);
@@ -256,6 +302,19 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           </div>
         </div>
 
+        {/* Notice Message Banner (Replaces disruptive window.alert) */}
+        {noticeMessage && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-200 text-xs px-4 py-2 flex items-center justify-between animate-in fade-in">
+            <span>{noticeMessage}</span>
+            <button
+              onClick={() => setNoticeMessage(null)}
+              className="text-amber-400 hover:text-white text-xs px-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Messages Scroll Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-950/40">
           {messages.map((m) => {
@@ -280,6 +339,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                     <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1.5">
                       <button
                         onClick={() => {
+                          if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
                           onNavigateToTab(m.actionData!.targetTab!, m.actionData);
                           onClose();
                         }}
@@ -292,8 +352,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between gap-2 mt-1.5 text-[10px] text-slate-400">
-                    <span>{m.timestamp}</span>
+                  <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-slate-700/40 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <span>{m.timestamp}</span>
+                      {isAsst && (
+                        <button
+                          type="button"
+                          onClick={() => speakText(m.speechText || m.text)}
+                          className="flex items-center gap-1 text-cyan-300 hover:text-white px-1.5 py-0.5 rounded bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/20 cursor-pointer"
+                          title="استمع لهذا الرد بالصوت"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>سماع</span>
+                        </button>
+                      )}
+                    </div>
                     {isAsst && (
                       <span className="flex items-center gap-1 text-slate-400">
                         <ShieldCheck className="w-3 h-3 text-emerald-400" />

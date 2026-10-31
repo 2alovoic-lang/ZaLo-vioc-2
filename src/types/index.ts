@@ -1,4 +1,4 @@
-export type Language = 'vi' | 'fr' | 'en';
+export type Language = 'ar' | 'dz' | 'fr' | 'en' | 'vi';
 
 export type MessageStatus = 'sent' | 'delivered' | 'seen';
 
