@@ -324,7 +324,8 @@ export default function App() {
   // Announce to Screen Readers (TalkBack / NVDA) + optional audio read
   const announceToScreenReader = (text: string, forceAudio: boolean = false) => {
     setAriaAnnouncement(text);
-    if (forceAudio || accessibilitySettings.screenReaderAnnounce || accessibilitySettings.blindAssistanceMode) {
+    const isSpeaking = typeof window !== 'undefined' && window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+    if (!isSpeaking && (forceAudio || accessibilitySettings.screenReaderAnnounce || accessibilitySettings.blindAssistanceMode)) {
       speakVoice(text);
     }
   };

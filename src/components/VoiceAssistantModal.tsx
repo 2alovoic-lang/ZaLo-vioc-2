@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { AssistantInteraction } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
-import { speakWithFullVoice, stopSpeaking } from '../utils/speechManager';
+import { speakWithFullVoice, stopSpeaking, playAudioChime } from '../utils/speechManager';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -101,8 +101,18 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         handleSendMessage(transcript);
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
         setIsListening(false);
+        const errType = event?.error;
+        if (errType === 'not-allowed') {
+          const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح.';
+          setNoticeMessage(msg);
+          speakText(msg);
+        } else if (errType === 'no-speech') {
+          const msg = 'لم أتمكن من سماعك، تفضل بالضغط والمحاولة ثانية أو كتابة طلبك.';
+          setNoticeMessage(msg);
+          speakText(msg);
+        }
       };
 
       recognition.onend = () => {
@@ -130,6 +140,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const toggleListening = () => {
     if (!recognitionRef.current) {
       setNoticeMessage('التعرف الصوتي غير مدعوم في هذا المتصفح، يمكنك كتابة رسالتك في الحقل أدناه.');
+      speakText('التعرف الصوتي غير مدعوم في متصفحك، تفضل بكتابة رسالتك.');
       setTimeout(() => setNoticeMessage(null), 4000);
       return;
     }
@@ -141,6 +152,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       try {
         // Interruption: instantly silence assistant when user speaks
         stopSpeaking();
+        playAudioChime('listen');
         recognitionRef.current.start();
         setIsListening(true);
       } catch {

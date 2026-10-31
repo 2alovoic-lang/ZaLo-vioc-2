@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { AccessibilitySettings } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
-import { speakWithFullVoice, stopSpeaking, unlockAudio } from '../utils/speechManager';
+import { speakWithFullVoice, stopSpeaking, unlockAudio, playAudioChime } from '../utils/speechManager';
 
 interface HomeVoiceViewProps {
   onNavigateToService: (
@@ -71,8 +71,28 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         handleSpeechRecognized(transcript);
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
         setVoiceState('idle');
+        const errType = event?.error;
+        console.warn('Speech recognition error:', errType);
+        if (errType === 'not-allowed') {
+          const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح، أو يمكنك كتابة طلبك.';
+          setAssistantMessage(msg);
+          setShowTextInput(true);
+          playAudioChime('alert');
+          speakTextAloud(msg);
+        } else if (errType === 'no-speech') {
+          const msg = 'لم أتمكن من سماعك، تفضل بالضغط والتحدث مجدداً أو كتابة طلبك.';
+          setAssistantMessage(msg);
+          playAudioChime('alert');
+          speakTextAloud(msg);
+        } else if (errType === 'network') {
+          const msg = 'تعذر الاتصال بخدمة التعرف الصوتي. يمكنك كتابة طلبك في الحقل أدناه.';
+          setAssistantMessage(msg);
+          setShowTextInput(true);
+          playAudioChime('alert');
+          speakTextAloud(msg);
+        }
       };
 
       recognition.onend = () => {
@@ -84,7 +104,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
     return () => {
       if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
-      stopSpeaking();
+      // NOTE: We do not call stopSpeaking() here so that speech output
+      // continues uninterrupted when navigating to another tab/service!
     };
   }, [currentLanguage]);
 
@@ -93,13 +114,36 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     stopSpeaking();
     setAssistantMessage(null);
     setTranscribedText('');
-    setVoiceState('listening');
+    playAudioChime('listen');
 
-    if (recognitionRef.current) {
+    if (!recognitionRef.current) {
+      const msg = 'التعرف الصوتي المباشر غير مدعوم في هذا المتصفح. يمكنك كتابة طلبك وسأرد عليك صوتياً.';
+      setAssistantMessage(msg);
+      setShowTextInput(true);
+      speakTextAloud(msg);
+      setVoiceState('idle');
+      return;
+    }
+
+    try {
+      setVoiceState('listening');
+      recognitionRef.current.start();
+    } catch {
+      // If recognition was already running or resetting
       try {
-        recognitionRef.current.start();
+        recognitionRef.current.stop();
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start();
+            setVoiceState('listening');
+          } catch {
+            setVoiceState('idle');
+            setShowTextInput(true);
+          }
+        }, 120);
       } catch {
-        // Recognition already started or error
+        setVoiceState('idle');
+        setShowTextInput(true);
       }
     }
   };
@@ -126,32 +170,77 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     });
   };
 
-  const handleSpeechRecognized = (transcript: string) => {
+  const handleSpeechRecognized = async (transcript: string) => {
     if (!transcript.trim()) {
       setVoiceState('idle');
       return;
     }
 
     setVoiceState('processing');
+    playAudioChime('success');
 
-    processingTimerRef.current = setTimeout(() => {
-      const nlpResult = processLocalNLP(transcript, currentWilaya);
-      const textToSpeak = nlpResult.speechText || nlpResult.reply;
+    try {
+      // 1. Try unified backend assistant API
+      let data: any = null;
+      try {
+        const response = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: transcript.trim(),
+            context: { currentWilaya },
+            language: currentLanguage,
+          }),
+        });
 
-      setAssistantMessage(nlpResult.reply);
+        if (response.ok) {
+          data = await response.json();
+        }
+      } catch {
+        data = null;
+      }
+
+      // 2. Seamless local NLP fallback
+      if (!data || !data.reply) {
+        data = processLocalNLP(transcript.trim(), currentWilaya);
+      }
+
+      const textToSpeak = data.speechText || data.reply;
+      setAssistantMessage(data.reply);
       setAssistantSpeechText(textToSpeak);
 
-      // Speak response in crystal clear Arabic
+      // Spoken voice reply in clear Arabic
       speakTextAloud(textToSpeak);
 
-      // Navigate if matching an intent
-      if (nlpResult.actionType === 'navigate_to_tab' && nlpResult.targetTab !== 'home') {
-        setVoiceState('idle');
-        onNavigateToService(nlpResult.targetTab as any);
+      // Graceful navigation if actionType matches a destination tab
+      if (data.actionType === 'navigate_to_tab' && data.targetTab && data.targetTab !== 'home') {
+        const target = data.targetTab;
+        if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = setTimeout(() => {
+          setVoiceState('idle');
+          onNavigateToService(target as any);
+        }, 1300);
       } else {
         setVoiceState('idle');
       }
-    }, 1100);
+    } catch {
+      // Emergency safe local fallback
+      const fallback = processLocalNLP(transcript.trim(), currentWilaya);
+      const textToSpeak = fallback.speechText || fallback.reply;
+      setAssistantMessage(fallback.reply);
+      setAssistantSpeechText(textToSpeak);
+      speakTextAloud(textToSpeak);
+      if (fallback.actionType === 'navigate_to_tab' && fallback.targetTab && fallback.targetTab !== 'home') {
+        const target = fallback.targetTab;
+        if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = setTimeout(() => {
+          setVoiceState('idle');
+          onNavigateToService(target as any);
+        }, 1300);
+      } else {
+        setVoiceState('idle');
+      }
+    }
   };
 
   const handleSubmitText = (e: React.FormEvent) => {

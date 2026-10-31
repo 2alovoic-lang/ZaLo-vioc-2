@@ -14,25 +14,73 @@ let cachedArabicVoice: SpeechSynthesisVoice | null = null;
 let audioContextUnlocked = false;
 
 /**
- * Unlock SpeechSynthesis on user gesture (required by mobile Chrome / Safari)
+ * Unlock audio session on user gesture (required by mobile Chrome / Safari)
  */
 export const unlockAudio = () => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (typeof window === 'undefined') return;
   try {
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
     }
-    if (!audioContextUnlocked) {
-      audioContextUnlocked = true;
-      // Emit a tiny silent utterance to unlock the mobile audio session
-      const silent = new SpeechSynthesisUtterance(' ');
-      silent.volume = 0.01;
-      silent.rate = 2.0;
-      silent.lang = 'ar-SA';
-      window.speechSynthesis.speak(silent);
+    if (window.speechSynthesis && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
     }
   } catch {
     // Ignore unlock issues
+  }
+};
+
+/**
+ * Pleasant audio chime for listening activation and feedback
+ */
+export const playAudioChime = (type: 'listen' | 'success' | 'alert' = 'listen') => {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'listen') {
+      // Gentle futuristic chime: 520Hz -> 680Hz
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(680, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.09, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.22);
+    } else if (type === 'success') {
+      // Pleasant confirmation tone: 600Hz -> 800Hz
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(850, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } else {
+      // Soft alert tone: 400Hz -> 320Hz
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    }
+  } catch {
+    // Ignore audio context issues
   }
 };
 
@@ -161,8 +209,11 @@ export const speakWithFullVoice = async (
   if (!cleanText) return;
 
   try {
-    // Stop any ongoing speech and resume if suspended
-    stopSpeaking();
+    // Stop any ongoing speech and flush Chromium audio queue cleanly
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      stopSpeaking();
+      await new Promise((resolve) => setTimeout(resolve, 45));
+    }
     unlockAudio();
 
     if (window.speechSynthesis.paused) {
