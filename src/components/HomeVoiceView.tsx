@@ -11,6 +11,7 @@ import {
 import { AccessibilitySettings } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
 import { speakWithFullVoice, stopSpeaking, unlockAudio, playAudioChime } from '../utils/speechManager';
+import { speakWithCloudVoice, stopCloudVoice } from '../utils/cloudVoice';
 
 interface HomeVoiceViewProps {
   onNavigateToService: (
@@ -111,6 +112,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const startListeningFlow = () => {
     unlockAudio();
+    stopCloudVoice();
     stopSpeaking();
     setAssistantMessage(null);
     setTranscribedText('');
@@ -150,6 +152,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    stopCloudVoice();
     stopSpeaking();
     if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
     if (recognitionRef.current) {
@@ -162,8 +165,13 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     setVoiceState('idle');
   };
 
-  const speakTextAloud = (textToSpeak: string) => {
+  const speakTextAloud = async (textToSpeak: string) => {
     unlockAudio();
+    // Prefer the fixed female Arabic cloud voice; retain device speech as a graceful fallback.
+    if (currentLanguage === 'ar' || currentLanguage === 'dz') {
+      const cloudPlayed = await speakWithCloudVoice(textToSpeak);
+      if (cloudPlayed) return;
+    }
     speakWithFullVoice(textToSpeak, {
       lang: currentLanguage === 'fr' ? 'fr' : currentLanguage === 'en' ? 'en' : 'ar',
       rate: 0.92,
@@ -572,7 +580,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
               </button>
               <button
                 onClick={() => {
-                  stopSpeaking();
+                  stopCloudVoice();
+    stopSpeaking();
                   setAssistantMessage(null);
                 }}
                 className="text-cyan-400 hover:text-white"
