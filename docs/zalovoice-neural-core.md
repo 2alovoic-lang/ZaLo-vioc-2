@@ -1,10 +1,14 @@
 # ZaLoVoice Neural Core — Foundation
 
 ## Goal
-Build a long-lived conversation runtime that is independent of React route/component lifecycles. UI components render state; they do not own the conversation or microphone session.
+Build a long-lived conversation runtime independent of React route/component lifecycles. UI components render state; they do not own the conversation or microphone session.
 
-## Current scope
-This first foundation is provider-neutral and deliberately does not connect a microphone, model provider, database, external tools, or production deployment. It establishes typed contracts, bounded session memory, and an explicit tool allowlist.
+## Implemented in this branch
+- Provider-neutral contracts for phases, messages, evidence, tools, and improvement proposals.
+- Bounded in-memory conversation store (80 most recent messages).
+- Explicit allowlisted tool registry; no tools are registered by default.
+- Lifecycle-independent conversation runtime with subscriptions, cancellation, interruption, phase events, and tool-result evidence references.
+- App-process runtime registry so navigation/view unmounts do not dispose the conversation.
 
 ## Target architecture
 - **ConversationRuntime:** owns one conversation lifecycle and emits snapshots.
@@ -12,7 +16,7 @@ This first foundation is provider-neutral and deliberately does not connect a mi
 - **TurnManager:** coordinates user turns, assistant output, interruption, cancellation, and turn completion.
 - **MemoryStore:** starts with bounded session memory; durable memory requires a separate privacy and retention design.
 - **ToolRegistry / TaskExecutor:** only explicitly registered tools may execute.
-- **Evidence & Verification:** tool results must carry evidence; the assistant must distinguish verified outcomes from suggestions or unavailable data.
+- **Evidence & Verification:** tool results must carry evidence; distinguish verified outcomes from suggestions or unavailable data.
 - **Evaluation & Improvement:** record test outcomes and create reviewable improvement proposals.
 
 ## Self-improvement policy
@@ -27,7 +31,10 @@ On a real Android device, complete five consecutive rounds in one session:
 5. Interrupt assistant speech successfully.
 6. Stop once and confirm microphone release.
 
-A browser SpeechRecognition loop is not considered equivalent to a realtime speech-to-speech transport. No claim of success until device testing passes.
+A browser SpeechRecognition loop is not equivalent to a realtime speech-to-speech transport. No claim of success until device testing passes.
 
-## Non-goals for this foundation
-No fabricated product listings, no simulated external actions, no API keys in client code, no billing activation, and no production integration.
+## Not implemented yet
+No live microphone/audio transport, model streaming adapter, server-issued ephemeral credentials, durable memory, production tool integrations, or automatic deployment. This PR is a runtime foundation, not yet a replacement for the current voice UI.
+
+## Non-goals
+No fabricated product listings, simulated external actions, API keys in client code, billing activation, or production integration.
