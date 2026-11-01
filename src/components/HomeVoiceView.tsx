@@ -44,6 +44,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const recognitionRef = useRef<any>(null);
   const processingTimerRef = useRef<any>(null);
+  const finalTranscriptRef = useRef('');
+  const continuousFushaRef = useRef(false);
+  const pendingFushaRestartRef = useRef(false);
+  const restartTimerRef = useRef<number | null>(null);
 
   // Initialize Speech Recognition cleanly
   useEffect(() => {
@@ -53,27 +57,37 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang =
-        currentLanguage === 'dz' || currentLanguage === 'ar'
-          ? 'ar-DZ'
-          : currentLanguage === 'fr'
-          ? 'fr-FR'
-          : 'en-US';
+      recognition.interimResults = true;
+      // Match the conversation tab's known-working Arabic recognition locale.
+      // The user's Android test confirms that this path captures Arabic speech.
+      // Phase 1 is strictly Modern Standard Arabic (Fusha).
+      recognition.lang = 'ar-SA';
 
       recognition.onstart = () => {
         setVoiceState('listening');
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setTranscribedText(transcript);
-        handleSpeechRecognized(transcript);
+        let finalText = '';
+        let interimText = '';
+        for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const part = result?.[0]?.transcript || '';
+          if (result.isFinal) finalText += part;
+          else interimText += part;
+        }
+        if (interimText) setTranscribedText(interimText);
+        if (finalText.trim()) {
+          const transcript = finalText.trim();
+          finalTranscriptRef.current = transcript;
+          setTranscribedText(transcript);
+          handleSpeechRecognized(transcript);
+        }
       };
 
       recognition.onerror = (event: any) => {
         setVoiceState('idle');
-        const errType = event?.error;
+        const errType = event?.error || 'unknown';
         console.warn('Speech recognition error:', errType);
         if (errType === 'not-allowed') {
           const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح، أو يمكنك كتابة طلبك.';
@@ -86,17 +100,24 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           setAssistantMessage(msg);
           playAudioChime('alert');
           speakTextAloud(msg);
-        } else if (errType === 'network') {
-          const msg = 'تعذر الاتصال بخدمة التعرف الصوتي. يمكنك كتابة طلبك في الحقل أدناه.';
+        } else {
+          const msg = `تعذر التقاط الكلام (${errType}). تحقق من إذن الميكروفون واتصال الإنترنت ثم حاول مجدداً.`;
           setAssistantMessage(msg);
           setShowTextInput(true);
           playAudioChime('alert');
-          speakTextAloud(msg);
         }
       };
 
       recognition.onend = () => {
         setVoiceState((prev) => (prev === 'listening' ? 'idle' : prev));
+        if (continuousFushaRef.current && pendingFushaRestartRef.current) {
+          pendingFushaRestartRef.current = false;
+          if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+          restartTimerRef.current = window.setTimeout(() => {
+            if (!continuousFushaRef.current || !recognitionRef.current) return;
+            try { recognitionRef.current.start(); } catch { setVoiceState('idle'); }
+          }, 500);
+        }
       };
 
       recognitionRef.current = recognition;
@@ -112,8 +133,11 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const startListeningFlow = () => {
     unlockAudio();
     stopSpeaking();
+    continuousFushaRef.current = true;
+    pendingFushaRestartRef.current = false;
     setAssistantMessage(null);
     setTranscribedText('');
+    finalTranscriptRef.current = '';
     playAudioChime('listen');
 
     if (!recognitionRef.current) {
@@ -127,6 +151,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
     try {
       setVoiceState('listening');
+      setAssistantMessage('الميكروفون يعمل. قل جملتك الآن؛ ستظهر كلماتك هنا.');
       recognitionRef.current.start();
     } catch {
       // If recognition was already running or resetting
@@ -143,6 +168,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         }, 120);
       } catch {
         setVoiceState('idle');
+        setAssistantMessage('لم يبدأ التقاط الصوت. اضغط كتابة لإرسال طلبك، أو أعد المحاولة.');
         setShowTextInput(true);
       }
     }
@@ -150,6 +176,9 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    continuousFushaRef.current = false;
+    pendingFushaRestartRef.current = false;
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     stopSpeaking();
     if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
     if (recognitionRef.current) {
@@ -162,11 +191,20 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     setVoiceState('idle');
   };
 
-  const speakTextAloud = (textToSpeak: string) => {
+  const speakTextAloud = (textToSpeak: string, onEnd?: () => void) => {
     unlockAudio();
     speakWithFullVoice(textToSpeak, {
       lang: currentLanguage === 'fr' ? 'fr' : currentLanguage === 'en' ? 'en' : 'ar',
+      lang: 'ar',
       rate: 0.92,
+      onEnd: () => {
+        if (continuousFushaRef.current) {
+          pendingFushaRestartRef.current = true;
+          if (!recognitionRef.current) return;
+          try { recognitionRef.current.start(); } catch { /* onend handler restarts after recognition closes */ }
+        }
+        onEnd?.();
+      },
     });
   };
 
@@ -189,7 +227,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           body: JSON.stringify({
             message: transcript.trim(),
             context: { currentWilaya },
-            language: currentLanguage,
+            language: 'ar',
           }),
         });
 
@@ -447,6 +485,12 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           </div>
         )}
 
+        {transcribedText && (
+          <div className="mt-3 max-w-xs rounded-xl border border-cyan-500/30 bg-[#061828]/90 px-4 py-2 text-center text-sm text-white" dir="rtl" aria-live="polite">
+            {transcribedText}
+          </div>
+        )}
+
         {voiceState === 'processing' && (
           <div className="mt-4 flex flex-col items-center animate-fade-in">
             <span className="text-sm font-bold text-cyan-200 tracking-wide">
@@ -465,7 +509,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         )}
 
         {/* Quick Voice Play Test & Silent Input Access */}
-        {voiceState === 'idle' && (
+        {voiceState === 'idle' && !transcribedText && (
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={() => speakTextAloud('أهلاً بك في زالو فويس، أنا أستمع إليك وجاهز لخدمتك')}

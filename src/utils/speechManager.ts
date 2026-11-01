@@ -10,7 +10,7 @@
 
 let activeUtterance: SpeechSynthesisUtterance | null = null;
 let keepAliveTimer: number | null = null;
-let cachedArabicVoice: SpeechSynthesisVoice | null = null;
+const cachedArabicVoices = new Map<string, SpeechSynthesisVoice>();
 let audioContextUnlocked = false;
 
 /**
@@ -116,41 +116,35 @@ export const getBestVoiceForLanguage = async (lang: string = 'ar'): Promise<Spee
   if (!voices || voices.length === 0) return null;
 
   if (lang.startsWith('ar') || lang.startsWith('dz')) {
-    if (cachedArabicVoice) return cachedArabicVoice;
+    // Keep separate choices for MSA and Darija; one global cache can make
+    // the first requested dialect override every later one.
+    const languageKey = lang.startsWith('dz') ? 'dz' : 'ar';
+    const cachedVoice = cachedArabicVoices.get(languageKey);
+    if (cachedVoice && voices.some((voice) => voice.voiceURI === cachedVoice.voiceURI)) {
+      return cachedVoice;
+    }
 
-    // Filter all candidate Arabic voices
-    const arCandidates = voices.filter((v) => {
-      const code = v.lang.replace('_', '-').toLowerCase();
-      const name = v.name.toLowerCase();
-      return (
-        code.startsWith('ar') ||
-        code.includes('ar-') ||
-        name.includes('arabic') ||
-        name.includes('عربي') ||
-        name.includes('العربية') ||
-        name.includes('maged') ||
-        name.includes('tarik') ||
-        name.includes('laila') ||
-        name.includes('shakir') ||
-        name.includes('hamed')
-      );
+    const arCandidates = voices.filter((voice) => {
+      const code = voice.lang.replace('_', '-').toLowerCase();
+      const name = voice.name.toLowerCase();
+      return code.startsWith('ar-') || code === 'ar' ||
+        name.includes('arabic') || name.includes('عربي') || name.includes('العربية');
     });
 
     if (arCandidates.length > 0) {
-      // Prioritize natural/neural Google/Microsoft/Apple voices
-      const premiumVoice = arCandidates.find((v) => {
-        const n = v.name.toLowerCase();
-        return n.includes('natural') || n.includes('google') || n.includes('neural') || n.includes('enhanced') || n.includes('siri');
+      const isDarija = languageKey === 'dz';
+      // Prefer a dialect-specific voice only when the device actually provides one.
+      const regionalVoice = isDarija
+        ? arCandidates.find((voice) => /(^|[-_])dz([-_]|$)/i.test(voice.lang))
+        : arCandidates.find((voice) => /ar[-_]xa/i.test(voice.lang)) ||
+          arCandidates.find((voice) => /ar[-_]sa/i.test(voice.lang)) ||
+          arCandidates.find((voice) => /ar[-_]eg/i.test(voice.lang));
+      const naturalVoice = arCandidates.find((voice) => {
+        const name = voice.name.toLowerCase();
+        return name.includes('natural') || name.includes('neural') || name.includes('enhanced');
       });
-
-      // Prefer Algerian or Saudi or Egyptian
-      const regionalVoice =
-        arCandidates.find((v) => v.lang.toLowerCase().includes('dz')) ||
-        arCandidates.find((v) => v.lang.toLowerCase().includes('sa')) ||
-        arCandidates.find((v) => v.lang.toLowerCase().includes('eg'));
-
-      const selected = premiumVoice || regionalVoice || arCandidates[0];
-      cachedArabicVoice = selected;
+      const selected = regionalVoice || naturalVoice || arCandidates[0];
+      cachedArabicVoices.set(languageKey, selected);
       return selected;
     }
   } else if (lang.startsWith('fr')) {
