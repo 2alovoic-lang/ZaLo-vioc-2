@@ -109,3 +109,21 @@ test("callbacks from a stopped session cannot leak into its replacement", async 
   assert.deepEqual(received, []);
   await core.stop();
 });
+
+
+test("concurrent replacement starts are serialized and only one transport connects", async () => {
+  const core = new VoiceSessionController();
+  const gate = deferred();
+  let connects = 0;
+  await core.start(transport({ disconnect: async () => { await gate.promise; } }), callbacks());
+  await core.interrupt();
+  const first = core.start(transport({ connect: async () => { connects++; } }), callbacks());
+  const second = core.start(transport({ connect: async () => { connects++; } }), callbacks());
+  await Promise.resolve();
+  assert.equal(connects, 0);
+  gate.resolve();
+  await first;
+  await assert.rejects(second, /already running/);
+  assert.equal(connects, 1);
+  await core.stop();
+});
