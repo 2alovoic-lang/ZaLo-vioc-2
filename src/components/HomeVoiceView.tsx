@@ -45,6 +45,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const recognitionRef = useRef<any>(null);
   const processingTimerRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
+  const continuousFushaRef = useRef(false);
+  const restartTimerRef = useRef<number | null>(null);
 
   // Initialize Speech Recognition cleanly
   useEffect(() => {
@@ -57,12 +59,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       recognition.interimResults = true;
       // Match the conversation tab's known-working Arabic recognition locale.
       // The user's Android test confirms that this path captures Arabic speech.
-      recognition.lang =
-        currentLanguage === 'dz' || currentLanguage === 'ar'
-          ? 'ar-DZ'
-          : currentLanguage === 'fr'
-          ? 'fr-FR'
-          : 'en-US';
+      // Phase 1 is strictly Modern Standard Arabic (Fusha).
+      recognition.lang = 'ar-SA';
 
       recognition.onstart = () => {
         setVoiceState('listening');
@@ -111,6 +109,13 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
       recognition.onend = () => {
         setVoiceState((prev) => (prev === 'listening' ? 'idle' : prev));
+        if (continuousFushaRef.current && voiceState !== 'processing') {
+          if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+          restartTimerRef.current = window.setTimeout(() => {
+            if (!continuousFushaRef.current || !recognitionRef.current) return;
+            try { recognitionRef.current.start(); } catch { /* wait for next onend */ }
+          }, 450);
+        }
       };
 
       recognitionRef.current = recognition;
@@ -126,6 +131,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const startListeningFlow = () => {
     unlockAudio();
     stopSpeaking();
+    continuousFushaRef.current = true;
     setAssistantMessage(null);
     setTranscribedText('');
     finalTranscriptRef.current = '';
@@ -167,6 +173,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    continuousFushaRef.current = false;
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     stopSpeaking();
     if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
     if (recognitionRef.current) {
@@ -179,11 +187,19 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     setVoiceState('idle');
   };
 
-  const speakTextAloud = (textToSpeak: string) => {
+  const speakTextAloud = (textToSpeak: string, onEnd?: () => void) => {
     unlockAudio();
     speakWithFullVoice(textToSpeak, {
       lang: currentLanguage === 'fr' ? 'fr' : currentLanguage === 'en' ? 'en' : 'ar',
+      lang: 'ar',
       rate: 0.92,
+      onEnd: () => {
+        if (continuousFushaRef.current) {
+          setVoiceState('listening');
+          try { recognitionRef.current?.start(); } catch { /* onend handler retries */ }
+        }
+        onEnd?.();
+      },
     });
   };
 
