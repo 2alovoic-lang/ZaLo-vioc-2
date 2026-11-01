@@ -71,3 +71,24 @@ test("disconnect failure still returns controller to idle", async () => {
   await assert.rejects(core.stop(), /close failed/);
   assert.equal(core.snapshot().state, "idle");
 });
+
+
+test("fatal teardown completes before a replacement transport connects", async () => {
+  const core = new VoiceSessionController();
+  const gate = deferred();
+  const events = [];
+  let onError;
+  const first = transport({
+    connect: async (c) => { onError = c.onError; },
+    disconnect: async () => { events.push("disconnect-start"); await gate.promise; events.push("disconnect-end"); },
+  });
+  await core.start(first, callbacks());
+  onError({ code: "FATAL", message: "lost", recoverable: false });
+  const next = core.start(transport({ connect: async () => { events.push("connect-next"); } }), callbacks());
+  await Promise.resolve();
+  assert.deepEqual(events, ["disconnect-start"]);
+  gate.resolve();
+  await next;
+  assert.deepEqual(events, ["disconnect-start", "disconnect-end", "connect-next"]);
+  await core.stop();
+});
