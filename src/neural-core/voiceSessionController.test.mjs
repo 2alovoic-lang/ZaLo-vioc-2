@@ -92,3 +92,20 @@ test("fatal teardown completes before a replacement transport connects", async (
   assert.deepEqual(events, ["disconnect-start", "disconnect-end", "connect-next"]);
   await core.stop();
 });
+
+
+test("callbacks from a stopped session cannot leak into its replacement", async () => {
+  const core = new VoiceSessionController();
+  let oldCallbacks;
+  const received = [];
+  await core.start(transport({ connect: async (c) => { oldCallbacks = c; } }), {
+    ...callbacks(), onTranscript: (text) => received.push("old:" + text),
+  });
+  await core.stop();
+  await core.start(transport(), {
+    ...callbacks(), onTranscript: (text) => received.push("new:" + text),
+  });
+  oldCallbacks.onTranscript("late transcript", true);
+  assert.deepEqual(received, []);
+  await core.stop();
+});
