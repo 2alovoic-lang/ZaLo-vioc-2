@@ -36,7 +36,7 @@ export class ConversationStore {
       id: this.id,
       language: "ar",
       phase: this.phase,
-      messages: this.messages.map((message) => ({ ...message })),
+      messages: this.messages.map((message) => ({ ...message, ...(message.evidenceIds ? { evidenceIds: [...message.evidenceIds] } : {}) })),
       revision: this.revision,
     };
   }
