@@ -55,12 +55,11 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
-      // Android Chrome's speech service does not consistently expose ar-DZ.
-      // Use a widely supported Arabic locale for recognition; Darija words
-      // are still sent unchanged to the assistant's language understanding.
+      // Match the conversation tab's known-working Arabic recognition locale.
+      // The user's Android test confirms that this path captures Arabic speech.
       recognition.lang =
         currentLanguage === 'dz' || currentLanguage === 'ar'
-          ? 'ar-SA'
+          ? 'ar-DZ'
           : currentLanguage === 'fr'
           ? 'fr-FR'
           : 'en-US';
@@ -465,7 +464,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           </div>
         )}
 
-        {transcribedText && (voiceState === 'listening' || voiceState === 'processing') && (
+        {transcribedText && (
           <div className="mt-3 max-w-xs rounded-xl border border-cyan-500/30 bg-[#061828]/90 px-4 py-2 text-center text-sm text-white" dir="rtl" aria-live="polite">
             {transcribedText}
           </div>
@@ -489,7 +488,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         )}
 
         {/* Quick Voice Play Test & Silent Input Access */}
-        {voiceState === 'idle' && (
+        {voiceState === 'idle' && !transcribedText && (
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={() => speakTextAloud('أهلاً بك في زالو فويس، أنا أستمع إليك وجاهز لخدمتك')}
