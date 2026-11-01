@@ -6,10 +6,12 @@ import { VoiceConversationBridge } from "./voiceConversationBridge.ts";
 function makeTransport() {
   let callbacks;
   let disconnects = 0;
+  let resumes = 0;
   return {
     transport: {
       connect: async (value) => { callbacks = value; },
       interrupt: async () => {},
+      resume: async () => { resumes += 1; },
       disconnect: async () => { disconnects += 1; },
     },
     emit: (role, text, final = true) => {
@@ -17,6 +19,7 @@ function makeTransport() {
       else callbacks.onAssistantText(text, final);
     },
     disconnectCount: () => disconnects,
+    resumeCount: () => resumes,
   };
 }
 
@@ -49,5 +52,20 @@ test("bridge interruption and stop are delegated to the session controller", asy
   assert.equal(runtime.snapshot().phase, "interrupted");
   await bridge.stop();
   assert.equal(bridge.sessionSnapshot().state, "idle");
+  runtime.dispose();
+});
+
+test("bridge resumes the same transport after interruption", async () => {
+  const runtime = new ConversationRuntime({ conversationId: "bridge-resume" });
+  const bridge = new VoiceConversationBridge(runtime);
+  const fake = makeTransport();
+  await bridge.start(fake.transport);
+  await bridge.interrupt();
+  await bridge.resume();
+  assert.equal(fake.resumeCount(), 1);
+  assert.equal(bridge.sessionSnapshot().state, "active");
+  assert.equal(runtime.snapshot().phase, "listening");
+  await bridge.stop();
+  assert.equal(fake.disconnectCount(), 1);
   runtime.dispose();
 });
