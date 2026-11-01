@@ -46,6 +46,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const processingTimerRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
   const continuousFushaRef = useRef(false);
+  const pendingFushaRestartRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
 
   // Initialize Speech Recognition cleanly
@@ -109,12 +110,13 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
       recognition.onend = () => {
         setVoiceState((prev) => (prev === 'listening' ? 'idle' : prev));
-        if (continuousFushaRef.current && voiceState !== 'processing') {
+        if (continuousFushaRef.current && pendingFushaRestartRef.current) {
+          pendingFushaRestartRef.current = false;
           if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
           restartTimerRef.current = window.setTimeout(() => {
             if (!continuousFushaRef.current || !recognitionRef.current) return;
-            try { recognitionRef.current.start(); } catch { /* wait for next onend */ }
-          }, 450);
+            try { recognitionRef.current.start(); } catch { setVoiceState('idle'); }
+          }, 500);
         }
       };
 
@@ -132,6 +134,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     unlockAudio();
     stopSpeaking();
     continuousFushaRef.current = true;
+    pendingFushaRestartRef.current = false;
     setAssistantMessage(null);
     setTranscribedText('');
     finalTranscriptRef.current = '';
@@ -174,6 +177,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     continuousFushaRef.current = false;
+    pendingFushaRestartRef.current = false;
     if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     stopSpeaking();
     if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
@@ -195,8 +199,9 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       rate: 0.92,
       onEnd: () => {
         if (continuousFushaRef.current) {
-          setVoiceState('listening');
-          try { recognitionRef.current?.start(); } catch { /* onend handler retries */ }
+          pendingFushaRestartRef.current = true;
+          if (!recognitionRef.current) return;
+          try { recognitionRef.current.start(); } catch { /* onend handler restarts after recognition closes */ }
         }
         onEnd?.();
       },
