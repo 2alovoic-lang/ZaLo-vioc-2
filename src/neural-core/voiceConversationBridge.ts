@@ -1,6 +1,5 @@
 import { ConversationRuntime } from "./conversationRuntime";
 import { VoiceSessionController, type VoiceTransport, type VoiceSessionSnapshot } from "./voiceSessionController";
-import type { CorePhase } from "./types";
 
 /**
  * Connects one provider transport to the app-owned conversation runtime.
