@@ -227,7 +227,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           body: JSON.stringify({
             message: transcript.trim(),
             context: { currentWilaya },
-            language: currentLanguage,
+            language: 'ar',
           }),
         });
 
