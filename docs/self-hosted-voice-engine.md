@@ -31,6 +31,14 @@ Provide two selectable, production-oriented assistant voices (one masculine, one
 - It uses a reference audio sample for voice conditioning/cloning. Use only recordings with documented consent and rights.
 - Benchmark as an MSA/English comparison candidate; do not assume it provides two ready-made gender presets.
 
+## Language and speaking-style policy
+
+- In everyday conversation, prefer natural Algerian Darija when the user speaks Darija.
+- When explaining lessons, science, instructions, formal information, or when the user requests it, switch to clear Modern Standard Arabic (MSA).
+- Preserve the user's chosen male/female voice across both registers; changing language/register must not silently change the selected voice.
+- Treat English as a later language expansion and benchmark it separately.
+- Do not claim dialect-level fluency until native Algerian listeners have evaluated representative samples from multiple regions.
+
 ## Voice asset policy
 
 - Create two distinct, licensed/consented reference recordings for the male and female presets.
