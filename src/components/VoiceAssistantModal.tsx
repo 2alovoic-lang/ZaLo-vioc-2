@@ -50,12 +50,15 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedInitialQueryRef = useRef<string | null>(null);
   const autoNavigateTimerRef = useRef<any>(null);
+  const autoConversationRef = useRef(false);
+  const recognitionStartingRef = useRef(false);
 
   // Stop speech and clear timers when closing modal or unmounting
   useEffect(() => {
     if (!isOpen) {
       stopSpeaking();
       processedInitialQueryRef.current = null;
+      autoConversationRef.current = false;
       if (autoNavigateTimerRef.current) clearTimeout(autoNavigateTimerRef.current);
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch { /* ignore */ }
@@ -116,6 +119,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       };
 
       recognition.onend = () => {
+        recognitionStartingRef.current = false;
         setIsListening(false);
       };
 
@@ -132,9 +136,29 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   if (!isOpen) return null;
 
   // Text-to-speech speaker using persistent, un-truncated voice engine
+  const startRecognition = () => {
+    if (!autoConversationRef.current || !isOpen || !recognitionRef.current || recognitionStartingRef.current) return;
+    try {
+      recognitionStartingRef.current = true;
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch {
+      recognitionStartingRef.current = false;
+      setIsListening(false);
+      setNoticeMessage('تعذر تشغيل الميكروفون تلقائياً. اضغط زر الميكروفون للمتابعة.');
+    }
+  };
+
   const speakText = (text: string) => {
-    if (!voiceSpeechEnabled) return;
-    speakWithFullVoice(text, { lang: 'ar' });
+    if (!voiceSpeechEnabled) {
+      if (autoConversationRef.current) window.setTimeout(startRecognition, 350);
+      return;
+    }
+    speakWithFullVoice(text, { lang: 'ar', onEnd: () => {
+      if (autoConversationRef.current) window.setTimeout(startRecognition, 350);
+    }, onError: () => {
+      if (autoConversationRef.current) window.setTimeout(startRecognition, 350);
+    }});
   };
 
   const toggleListening = () => {
@@ -146,16 +170,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     }
 
     if (isListening) {
+      autoConversationRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
+      setNoticeMessage('تم إيقاف المحادثة الصوتية.');
     } else {
       try {
-        // Interruption: instantly silence assistant when user speaks
+        autoConversationRef.current = true;
         stopSpeaking();
         playAudioChime('listen');
+        recognitionStartingRef.current = true;
         recognitionRef.current.start();
         setIsListening(true);
+        setNoticeMessage('المحادثة الصوتية مستمرة. اضغط الميكروفون لإنهائها.');
       } catch {
+        recognitionStartingRef.current = false;
         setIsListening(false);
       }
     }
