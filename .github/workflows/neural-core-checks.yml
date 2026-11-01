@@ -1,0 +1,39 @@
+name: Neural Core checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/realtime-fusha-session-foundation
+    paths:
+      - 'src/neural-core/**'
+      - 'src/voice/**'
+      - 'docs/zalovoice-neural-core.md'
+      - 'package.json'
+      - 'tsconfig.json'
+      - '.github/workflows/neural-core-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neural-core-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript validation
+        run: npm run lint
+      - name: Production build validation
+        run: npm run build
