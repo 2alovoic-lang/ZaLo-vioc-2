@@ -10,6 +10,8 @@ export interface VoiceTransportCallbacks {
 export interface VoiceTransport {
   connect(callbacks: VoiceTransportCallbacks, signal: AbortSignal): Promise<void>;
   interrupt(): Promise<void>;
+  /** Resume listening after assistant output was interrupted, without reconnecting the microphone. */
+  resume?(): Promise<void>;
   disconnect(): Promise<void>;
 }
 
@@ -45,8 +47,6 @@ export class VoiceSessionController {
   }
 
   start(transport: VoiceTransport, callbacks: VoiceTransportCallbacks): Promise<void> {
-    // Serialize starts: two callers must never both pass the idle/interrupted
-    // check while waiting for the same asynchronous teardown.
     const queued = this.startQueue.then(() => this.startInternal(transport, callbacks));
     this.startQueue = queued.catch(() => undefined);
     return queued;
@@ -56,9 +56,6 @@ export class VoiceSessionController {
     if (this.state === "connecting" || this.state === "active" || this.state === "ending") {
       throw new Error("A voice session is already running");
     }
-
-    // Interrupted/error sessions must release their previous transport before a new
-    // microphone pipeline can be opened.
     if (this.transport) await this.stop();
     if (this.pendingTeardown) await this.pendingTeardown;
     const generation = ++this.generation;
@@ -123,7 +120,15 @@ export class VoiceSessionController {
   }
 
   async resume(): Promise<void> {
-    throw new Error("This transport does not define safe resume semantics");
+    if (this.state !== "interrupted" || !this.transport) {
+      throw new Error("Only an interrupted active session can resume");
+    }
+    if (!this.transport.resume) {
+      throw new Error("This transport does not support safe in-session resume");
+    }
+    const transport = this.transport;
+    await transport.resume();
+    if (this.transport === transport && this.state === "interrupted") this.setState("active");
   }
 
   async stop(): Promise<void> {
