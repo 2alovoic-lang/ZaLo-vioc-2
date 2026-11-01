@@ -75,7 +75,7 @@ export class VoiceSessionController {
 
     try {
       await transport.connect(guarded, abort.signal);
-      if (!this.isCurrent(generation) || abort.signal.aborted || this.state !== "connecting") {
+      if (!this.isCurrent(generation) || abort.signal.aborted) {
         await this.releaseTransport(transport);
         return;
       }
