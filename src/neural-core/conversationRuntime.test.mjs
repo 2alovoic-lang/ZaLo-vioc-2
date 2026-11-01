@@ -11,8 +11,8 @@ test("conversation store bounds history and preserves newest messages", () => {
   for (let i = 1; i <= 85; i++) store.add(message(i));
   const snapshot = store.snapshot();
   assert.equal(snapshot.messages.length, 80);
-  assert.equal(snapshot.messages[0].id, "6");
-  assert.equal(snapshot.messages[79].id, "85");
+  assert.equal(snapshot.messages[0].id, 6);
+  assert.equal(snapshot.messages[79].id, 85);
   assert.equal(snapshot.revision, 85);
   assert.equal(snapshot.language, "ar");
 });
