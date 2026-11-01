@@ -41,6 +41,11 @@ export class VoiceConversationBridge {
     this.runtime.interrupt();
   }
 
+  async resume(): Promise<void> {
+    await this.session.resume();
+    this.runtime.setPhase("listening");
+  }
+
   async stop(): Promise<void> {
     try {
       await this.session.stop();
