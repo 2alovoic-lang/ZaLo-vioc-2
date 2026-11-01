@@ -48,6 +48,23 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const continuousFushaRef = useRef(false);
   const pendingFushaRestartRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
+  const recognitionEndedRef = useRef(false);
+  const assistantSpeakingRef = useRef(false);
+
+  // Restart only after both the browser recognition session and assistant speech have ended.
+  const scheduleFushaRestart = () => {
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+    restartTimerRef.current = window.setTimeout(() => {
+      if (!continuousFushaRef.current || !recognitionRef.current || assistantSpeakingRef.current) return;
+      try {
+        recognitionRef.current.start();
+        pendingFushaRestartRef.current = false;
+      } catch {
+        // The browser may still be closing the previous session; onend can trigger another attempt.
+        pendingFushaRestartRef.current = true;
+      }
+    }, 450);
+  };
 
   // Initialize Speech Recognition cleanly
   useEffect(() => {
@@ -64,6 +81,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       recognition.lang = 'ar-SA';
 
       recognition.onstart = () => {
+        recognitionEndedRef.current = false;
         setVoiceState('listening');
       };
 
@@ -109,14 +127,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       };
 
       recognition.onend = () => {
+        recognitionEndedRef.current = true;
         setVoiceState((prev) => (prev === 'listening' ? 'idle' : prev));
-        if (continuousFushaRef.current && pendingFushaRestartRef.current) {
-          pendingFushaRestartRef.current = false;
-          if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
-          restartTimerRef.current = window.setTimeout(() => {
-            if (!continuousFushaRef.current || !recognitionRef.current) return;
-            try { recognitionRef.current.start(); } catch { setVoiceState('idle'); }
-          }, 500);
+        if (continuousFushaRef.current && pendingFushaRestartRef.current && !assistantSpeakingRef.current) {
+          scheduleFushaRestart();
         }
       };
 
@@ -135,6 +149,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     stopSpeaking();
     continuousFushaRef.current = true;
     pendingFushaRestartRef.current = false;
+    assistantSpeakingRef.current = false;
     setAssistantMessage(null);
     setTranscribedText('');
     finalTranscriptRef.current = '';
@@ -178,6 +193,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     if (e) e.stopPropagation();
     continuousFushaRef.current = false;
     pendingFushaRestartRef.current = false;
+    assistantSpeakingRef.current = false;
     if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     stopSpeaking();
     if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
@@ -194,16 +210,22 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const speakTextAloud = (textToSpeak: string, onEnd?: () => void) => {
     unlockAudio();
     speakWithFullVoice(textToSpeak, {
-      lang: currentLanguage === 'fr' ? 'fr' : currentLanguage === 'en' ? 'en' : 'ar',
       lang: 'ar',
       rate: 0.92,
       onEnd: () => {
+        assistantSpeakingRef.current = false;
         if (continuousFushaRef.current) {
           pendingFushaRestartRef.current = true;
-          if (!recognitionRef.current) return;
-          try { recognitionRef.current.start(); } catch { /* onend handler restarts after recognition closes */ }
+          if (recognitionEndedRef.current) scheduleFushaRestart();
         }
         onEnd?.();
+      },
+      onError: () => {
+        assistantSpeakingRef.current = false;
+        if (continuousFushaRef.current) {
+          pendingFushaRestartRef.current = true;
+          if (recognitionEndedRef.current) scheduleFushaRestart();
+        }
       },
     });
   };
@@ -248,6 +270,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       setAssistantSpeechText(textToSpeak);
 
       // Spoken voice reply in clear Arabic
+      assistantSpeakingRef.current = true;
       speakTextAloud(textToSpeak);
 
       // Graceful navigation if actionType matches a destination tab
@@ -267,6 +290,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       const textToSpeak = fallback.speechText || fallback.reply;
       setAssistantMessage(fallback.reply);
       setAssistantSpeechText(textToSpeak);
+      assistantSpeakingRef.current = true;
       speakTextAloud(textToSpeak);
       if (fallback.actionType === 'navigate_to_tab' && fallback.targetTab && fallback.targetTab !== 'home') {
         const target = fallback.targetTab;
