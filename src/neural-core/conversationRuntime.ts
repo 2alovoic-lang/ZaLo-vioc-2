@@ -69,8 +69,9 @@ export class ConversationRuntime {
       ...(extra.evidenceIds ? { evidenceIds: [...extra.evidenceIds] } : {}),
     };
     const snapshot = this.store.add(message);
-    this.emit({ type: "message", snapshot, message });
-    return message;
+    const publishedMessage = { ...message, ...(message.evidenceIds ? { evidenceIds: [...message.evidenceIds] } : {}) };
+    this.emit({ type: "message", snapshot, message: publishedMessage });
+    return { ...publishedMessage, ...(publishedMessage.evidenceIds ? { evidenceIds: [...publishedMessage.evidenceIds] } : {}) };
   }
 
   /** Begin a cancellable turn. Starting a newer turn cancels the previous operation. */
