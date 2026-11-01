@@ -4,3 +4,4 @@ export * from "./toolRegistry";
 export * from "./conversationRuntime";
 export * from "./runtimeRegistry";
 export * from "./voiceSessionController";
+export * from "./voiceConversationBridge";
