@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/realtime-fusha-session-foundation
+      - feat/zalovoice-neural-core-foundation
     paths:
       - 'src/neural-core/**'
       - 'src/voice/**'
