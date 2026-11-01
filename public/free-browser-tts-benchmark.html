@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZaLoVoice — اختبار الصوت المجاني</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff}
+body{margin:0;padding:20px;max-width:900px;margin-inline:auto}
+header,.panel{background:#151d33;border:1px solid #2a3858;border-radius:16px;padding:18px;margin-bottom:16px}
+h1{font-size:1.45rem;margin:0 0 8px}h2{font-size:1.1rem;margin-top:0}
+p,.muted{color:#bac6df;line-height:1.7}
+label{display:block;margin:12px 0 6px}
+select,button,input{font:inherit;border-radius:10px;padding:10px;border:1px solid #435477;background:#0d1528;color:#fff;max-width:100%}
+select{width:100%}button{cursor:pointer;background:#24385f}button.primary{background:#2563eb}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sample{border-top:1px solid #2a3858;padding:14px 0}
+.sample strong{display:block;margin-bottom:7px}
+.text{line-height:1.9;font-size:1.05rem}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rating{display:flex;gap:8px;align-items:center;margin-top:10px}
+.rating input{width:70px}
+.status{padding:10px;border-radius:10px;background:#0d1528;color:#c7d2fe;margin-top:10px}
+@media(max-width:600px){.controls{grid-template-columns:1fr}body{padding:12px}}
+</style>
+</head>
+<body>
+<header>
+<h1>اختبار الصوت المجاني — ZaLoVoice</h1>
+<p>أداة تجريبية تعمل داخل المتصفح باستخدام الأصوات المثبتة على جهازك (SpeechSynthesis). لا تحتاج خادم GPU ولا ترسل النصوص أو التقييمات إلى أي خادم.</p>
+<p><b>تنبيه:</b> هذه تجربة أولية وليست محركًا جزائريًا متخصصًا. توفر الدارجة وجودة الصوت يعتمدان على الأصوات الموجودة في جهازك.</p>
+</header>
+<section class="panel">
+<h2>إعداد الصوت</h2>
+<div class="controls">
+<div><label for="voice">الصوت المثبت على جهازك</label><select id="voice"><option>جارٍ تحميل الأصوات…</option></select></div>
+<div><label for="rate">سرعة القراءة: <span id="rateValue">1.0</span></label><input id="rate" type="range" min=".75" max="1.2" step=".05" value="1" style="width:100%"></div>
+</div>
+<div class="actions" style="margin-top:14px"><button id="refresh">تحديث قائمة الأصوات</button><button id="stop">إيقاف الصوت</button><button class="primary" id="export">تصدير التقييمات JSON</button></div>
+<div class="status" id="status" role="status">يتم البحث عن الأصوات العربية في جهازك…</div>
+</section>
+<section class="panel">
+<h2>عبارات الاختبار</h2>
+<p class="muted">استمع إلى كل عبارة، ثم قيّمها من 1 إلى 5. جرّب الصوت نفسه مع الدارجة والفصحى، ولاحظ اختلاف النطق والطبيعية.</p>
+<div id="samples"></div>
+</section>
+<script>
+const samples = [
+{id:"greeting-01",category:"تحية",darija:"السلام عليكم، واش راك اليوم؟",msa:"السلام عليكم، كيف حالك اليوم؟"},
+{id:"assistant-02",category:"محادثة",darija:"مرحبا بيك، قولّي واش نقدر نعاونك؟",msa:"أهلًا بك، أخبرني كيف يمكنني مساعدتك؟"},
+{id:"transport-03",category:"النقل",darija:"نحب نطلب طاكسي للمحطة، تقدر تعاونّي؟",msa:"أريد طلب سيارة أجرة إلى المحطة، هل يمكنك مساعدتي؟"},
+{id:"commerce-04",category:"التجارة",darija:"شحال راهي هاذ السلعة؟ وهل كاين توصيل للدار؟",msa:"كم سعر هذا المنتج؟ وهل تتوفر خدمة التوصيل إلى المنزل؟"},
+{id:"food-05",category:"الطعام",darija:"نحب نطلب وجبة، واش كاين في القائمة اليوم؟",msa:"أريد طلب وجبة، ما الأطباق المتاحة في القائمة اليوم؟"},
+{id:"education-06",category:"التعليم",darija:"فسّرلي قانون نيوتن الثاني بطريقة بسيطة وبمثال.",msa:"اشرح لي قانون نيوتن الثاني بطريقة مبسطة مع مثال."},
+{id:"information-07",category:"معلومات",darija:"باش نعطيك معلومة صحيحة، لازم نتأكد من المصدر الرسمي.",msa:"لأقدم لك معلومة دقيقة، ينبغي التحقق من المصدر الرسمي."},
+{id:"long-08",category:"رد طويل",darija:"ما تقلقش، نقدر نمشيو خطوة بخطوة. أول حاجة نفهمو طلبك، ومن بعد نقترحو عليك الحلول المناسبة.",msa:"لا تقلق، يمكننا التقدم خطوة بخطوة. سنفهم طلبك أولًا، ثم نقترح عليك الحلول المناسبة."},
+{id:"numbers-09",category:"الأرقام والمواعيد",darija:"عندك ثلاثة مواعيد: التسعة صباحًا، الحداش، والثانية بعد الظهر.",msa:"لديك ثلاثة مواعيد: الساعة التاسعة صباحًا، والحادية عشرة، والثانية بعد الظهر."},
+{id:"safety-10",category:"السلامة",darija:"إذا كانت الحالة مستعجلة، اتصل بالحماية المدنية مباشرة وما تستناش.",msa:"إذا كانت الحالة طارئة، فاتصل بالحماية المدنية مباشرة ولا تنتظر."}
+];
+const $=id=>document.getElementById(id), voiceSelect=$("voice"), statusBox=$("status");
+let voices=[];
+const scores=JSON.parse(localStorage.getItem("zalovoice-tts-scores")||"{}");
+function refreshVoices(){
+ voices=speechSynthesis.getVoices();
+ voiceSelect.innerHTML="";
+ voices.forEach((v,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=v.name+" ("+v.lang+")"+(v.default?" — افتراضي":"");voiceSelect.append(o)});
+ const arabic=voices.filter(v=>/^ar/i.test(v.lang));
+ statusBox.textContent=voices.length+" صوت متاح. أصوات عربية: "+arabic.length+". "+(arabic.length?"اختر صوتًا عربيًا من القائمة.":"لم نعثر على صوت عربي مثبت؛ أضف صوتًا عربيًا من إعدادات تحويل النص إلى كلام في جهازك ثم حدّث القائمة.");
+}
+function key(id,lang){return id+"|"+lang+"|"+(voices[Number(voiceSelect.value)]?.voiceURI||"no-voice")}
+function speak(text){
+ const v=voices[Number(voiceSelect.value)];
+ if(!v){statusBox.textContent="اختر صوتًا أولًا.";return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);u.voice=v;u.lang=v.lang;u.rate=Number($("rate").value);
+ u.onstart=()=>statusBox.textContent="يتم تشغيل الصوت: "+v.name+" ("+v.lang+")";
+ u.onend=()=>statusBox.textContent="انتهى التشغيل. قيّم النتيجة أو جرّب عبارة أخرى.";
+ u.onerror=e=>statusBox.textContent="تعذر تشغيل الصوت: "+e.error;
+ speechSynthesis.speak(u);
+}
+function save(id,lang,value){scores[key(id,lang)]= {sample_id:id,language:lang,voice:voices[Number(voiceSelect.value)]?.name||"",voice_language:voices[Number(voiceSelect.value)]?.lang||"",rating:Number(value),saved_at:new Date().toISOString()};localStorage.setItem("zalovoice-tts-scores",JSON.stringify(scores));}
+function render(){
+ $("samples").innerHTML="";
+ samples.forEach(s=>{
+  const box=document.createElement("article");box.className="sample";
+  box.innerHTML='<strong>'+s.category+' · '+s.id+'</strong>';
+  [["darija","الدارجة الجزائرية"],["msa","العربية الفصحى"]].forEach(([lang,label])=>{
+   const row=document.createElement("div");row.style.marginTop="12px";
+   const title=document.createElement("b");title.textContent=label;row.append(title);
+   const p=document.createElement("p");p.className="text";p.textContent=s[lang];row.append(p);
+   const actions=document.createElement("div");actions.className="actions";
+   const play=document.createElement("button");play.className="primary";play.textContent="استمع";play.onclick=()=>speak(s[lang]);actions.append(play);
+   const rate=document.createElement("input");rate.type="number";rate.min="1";rate.max="5";rate.placeholder="1–5";rate.setAttribute("aria-label","التقييم من 1 إلى 5");
+   const old=Object.values(scores).find(x=>x.sample_id===s.id&&x.language===lang&&x.voice===(voices[Number(voiceSelect.value)]?.name||""));
+   if(old)rate.value=old.rating;
+   const saveBtn=document.createElement("button");saveBtn.textContent="حفظ التقييم";saveBtn.onclick=()=>{if(rate.value<1||rate.value>5){statusBox.textContent="أدخل تقييمًا من 1 إلى 5.";return}save(s.id,lang,rate.value);statusBox.textContent="تم حفظ التقييم محليًا على هذا الجهاز فقط."};
+   actions.append(rate,saveBtn);row.append(actions);box.append(row);
+  });
+  $("samples").append(box);
+ });
+}
+$("refresh").onclick=refreshVoices;$("stop").onclick=()=>{speechSynthesis.cancel();statusBox.textContent="تم إيقاف التشغيل."};
+$("rate").oninput=e=>$("rateValue").textContent=Number(e.target.value).toFixed(2);
+$("export").onclick=()=>{const blob=new Blob([JSON.stringify({exported_at:new Date().toISOString(),scores:Object.values(scores)},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="zalovoice-tts-scores.json";a.click();URL.revokeObjectURL(a.href)};
+voiceSelect.onchange=render;
+if(!("speechSynthesis" in window)){statusBox.textContent="هذا المتصفح لا يدعم SpeechSynthesis. جرّب Chrome على Android أو متصفحًا حديثًا."; $("refresh").disabled=true}
+else{refreshVoices();speechSynthesis.onvoiceschanged=refreshVoices;render()}
+</script>
+</body>
+</html>
