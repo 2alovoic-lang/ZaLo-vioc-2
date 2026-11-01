@@ -48,10 +48,12 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const startRecognitionRef = useRef<(() => void) | null>(null);
   const processedInitialQueryRef = useRef<string | null>(null);
   const autoNavigateTimerRef = useRef<any>(null);
   const autoConversationRef = useRef(false);
   const recognitionStartingRef = useRef(false);
+  const pendingRecognitionRestartRef = useRef(false);
 
   // Stop speech and clear timers when closing modal or unmounting
   useEffect(() => {
@@ -121,6 +123,12 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       recognition.onend = () => {
         recognitionStartingRef.current = false;
         setIsListening(false);
+        // Android Chrome may fire onend just after TTS onEnd. Coordinate both
+        // events so the restart is not lost to a race between them.
+        if (autoConversationRef.current && pendingRecognitionRestartRef.current) {
+          pendingRecognitionRestartRef.current = false;
+          window.setTimeout(() => startRecognitionRef.current?.(), 500);
+        }
       };
 
       recognitionRef.current = recognition;
@@ -139,15 +147,24 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const startRecognition = () => {
     if (!autoConversationRef.current || !isOpen || !recognitionRef.current || recognitionStartingRef.current) return;
     try {
+      pendingRecognitionRestartRef.current = false;
       recognitionStartingRef.current = true;
       recognitionRef.current.start();
       setIsListening(true);
+      setNoticeMessage('أنا أستمع إليك الآن... يمكنك متابعة الحديث.');
     } catch {
       recognitionStartingRef.current = false;
-      setIsListening(false);
-      setNoticeMessage('تعذر تشغيل الميكروفون تلقائياً. اضغط زر الميكروفون للمتابعة.');
+      // Some Android builds need a short idle gap after SpeechRecognition.onend.
+      pendingRecognitionRestartRef.current = true;
+      window.setTimeout(() => {
+        if (autoConversationRef.current && pendingRecognitionRestartRef.current) {
+          pendingRecognitionRestartRef.current = false;
+          startRecognitionRef.current?.();
+        }
+      }, 900);
     }
   };
+  startRecognitionRef.current = startRecognition;
 
   const speakText = (text: string) => {
     if (!voiceSpeechEnabled) {
@@ -155,9 +172,15 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       return;
     }
     speakWithFullVoice(text, { lang: 'ar', onEnd: () => {
-      if (autoConversationRef.current) window.setTimeout(startRecognition, 350);
+      if (autoConversationRef.current) {
+        pendingRecognitionRestartRef.current = true;
+        if (!recognitionStartingRef.current) window.setTimeout(() => startRecognitionRef.current?.(), 500);
+      }
     }, onError: () => {
-      if (autoConversationRef.current) window.setTimeout(startRecognition, 350);
+      if (autoConversationRef.current) {
+        pendingRecognitionRestartRef.current = true;
+        if (!recognitionStartingRef.current) window.setTimeout(() => startRecognitionRef.current?.(), 500);
+      }
     }});
   };
 
@@ -171,6 +194,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
     if (isListening) {
       autoConversationRef.current = false;
+      pendingRecognitionRestartRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
       setNoticeMessage('تم إيقاف المحادثة الصوتية.');
