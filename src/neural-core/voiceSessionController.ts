@@ -1,10 +1,5 @@
 import type { CorePhase } from "./types";
 
-/**
- * Adapter boundary for a future speech-to-speech provider.
- * Implementations must own exactly one microphone/audio pipeline and must
- * release it on disconnect. No provider or browser API is imported here.
- */
 export interface VoiceTransportCallbacks {
   onTranscript(text: string, final: boolean): void;
   onAssistantText(text: string, final: boolean): void;
@@ -26,10 +21,7 @@ export interface VoiceSessionSnapshot {
   lastError: { code: string; message: string; recoverable: boolean } | null;
 }
 
-/**
- * Owns one transport for the lifetime of a voice session.
- * UI components subscribe to snapshots; unmounting a view does not disconnect.
- */
+/** Owns one transport for a session; UI unmounts must not own microphone teardown. */
 export class VoiceSessionController {
   private state: VoiceSessionState = "idle";
   private connectedAt: number | null = null;
@@ -38,6 +30,7 @@ export class VoiceSessionController {
   private connectAbort: AbortController | null = null;
   private listeners = new Set<(snapshot: VoiceSessionSnapshot) => void>();
   private generation = 0;
+  private teardowns = new WeakMap<VoiceTransport, Promise<void>>();
 
   snapshot(): VoiceSessionSnapshot {
     return { state: this.state, connectedAt: this.connectedAt, lastError: this.lastError };
@@ -53,8 +46,11 @@ export class VoiceSessionController {
     if (this.state === "connecting" || this.state === "active" || this.state === "ending") {
       throw new Error("A voice session is already running");
     }
+
+    // Interrupted/error sessions must release their previous transport before a new
+    // microphone pipeline can be opened.
+    if (this.transport) await this.stop();
     const generation = ++this.generation;
-    this.connectAbort?.abort();
     const abort = new AbortController();
     this.connectAbort = abort;
     this.transport = transport;
@@ -70,20 +66,27 @@ export class VoiceSessionController {
         if (!this.isCurrent(generation)) return;
         this.lastError = error;
         this.setState("error");
+        abort.abort();
+        if (this.transport === transport) this.transport = null;
+        void this.releaseTransport(transport).catch(() => undefined);
         callbacks.onError(error);
       },
     };
 
     try {
       await transport.connect(guarded, abort.signal);
-      if (!this.isCurrent(generation) || abort.signal.aborted) {
-        await transport.disconnect();
+      if (!this.isCurrent(generation) || abort.signal.aborted || this.state !== "connecting") {
+        await this.releaseTransport(transport);
         return;
       }
       this.connectedAt = Date.now();
+      this.connectAbort = null;
       this.setState("active");
     } catch (error) {
-      if (!this.isCurrent(generation)) return;
+      if (!this.isCurrent(generation)) {
+        await this.releaseTransport(transport);
+        return;
+      }
       const failure = {
         code: "VOICE_CONNECT_FAILED",
         message: error instanceof Error ? error.message : "Voice connection failed",
@@ -91,26 +94,27 @@ export class VoiceSessionController {
       };
       this.lastError = failure;
       this.setState("error");
-      callbacks.onError(failure);
+      abort.abort();
+      if (this.transport === transport) this.transport = null;
       await this.releaseTransport(transport);
+      callbacks.onError(failure);
       throw error;
     }
   }
 
   async interrupt(): Promise<void> {
     if (this.state !== "active" || !this.transport) return;
-    await this.transport.interrupt();
-    this.setState("interrupted");
+    const transport = this.transport;
+    await transport.interrupt();
+    if (this.transport === transport && this.state === "active") this.setState("interrupted");
   }
 
   async resume(): Promise<void> {
-    // Reconnect semantics are provider-specific; silently pretending to resume
-    // would risk opening a second microphone pipeline.
     throw new Error("This transport does not define safe resume semantics");
   }
 
   async stop(): Promise<void> {
-    if (this.state === "idle") return;
+    if (this.state === "idle" && !this.transport) return;
     ++this.generation;
     this.setState("ending");
     this.connectAbort?.abort();
@@ -118,14 +122,19 @@ export class VoiceSessionController {
     const transport = this.transport;
     this.transport = null;
     this.connectedAt = null;
-    if (transport) await this.releaseTransport(transport);
-    this.setState("idle");
+    try {
+      if (transport) await this.releaseTransport(transport);
+    } finally {
+      this.setState("idle");
+    }
   }
 
-  private async releaseTransport(transport: VoiceTransport): Promise<void> {
-    try { await transport.disconnect(); } finally {
-      if (this.transport === transport) this.transport = null;
-    }
+  private releaseTransport(transport: VoiceTransport): Promise<void> {
+    const existing = this.teardowns.get(transport);
+    if (existing) return existing;
+    const teardown = Promise.resolve().then(() => transport.disconnect());
+    this.teardowns.set(transport, teardown);
+    return teardown;
   }
 
   private isCurrent(generation: number): boolean {
