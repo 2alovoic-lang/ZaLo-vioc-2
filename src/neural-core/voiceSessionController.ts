@@ -31,6 +31,7 @@ export class VoiceSessionController {
   private listeners = new Set<(snapshot: VoiceSessionSnapshot) => void>();
   private generation = 0;
   private teardowns = new WeakMap<VoiceTransport, Promise<void>>();
+  private pendingTeardown: Promise<void> | null = null;
 
   snapshot(): VoiceSessionSnapshot {
     return { state: this.state, connectedAt: this.connectedAt, lastError: this.lastError };
@@ -50,6 +51,7 @@ export class VoiceSessionController {
     // Interrupted/error sessions must release their previous transport before a new
     // microphone pipeline can be opened.
     if (this.transport) await this.stop();
+    if (this.pendingTeardown) await this.pendingTeardown;
     const generation = ++this.generation;
     const abort = new AbortController();
     this.connectAbort = abort;
@@ -68,7 +70,9 @@ export class VoiceSessionController {
         this.setState("error");
         abort.abort();
         if (this.transport === transport) this.transport = null;
-        void this.releaseTransport(transport).catch(() => undefined);
+        const teardown = this.releaseTransport(transport).catch(() => undefined);
+        this.pendingTeardown = teardown;
+        void teardown.finally(() => { if (this.pendingTeardown === teardown) this.pendingTeardown = null; });
         callbacks.onError(error);
       },
     };
