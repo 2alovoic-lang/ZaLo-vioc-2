@@ -32,6 +32,7 @@ export class VoiceSessionController {
   private generation = 0;
   private teardowns = new WeakMap<VoiceTransport, Promise<void>>();
   private pendingTeardown: Promise<void> | null = null;
+  private startQueue: Promise<void> = Promise.resolve();
 
   snapshot(): VoiceSessionSnapshot {
     return { state: this.state, connectedAt: this.connectedAt, lastError: this.lastError };
@@ -43,7 +44,15 @@ export class VoiceSessionController {
     return () => this.listeners.delete(listener);
   }
 
-  async start(transport: VoiceTransport, callbacks: VoiceTransportCallbacks): Promise<void> {
+  start(transport: VoiceTransport, callbacks: VoiceTransportCallbacks): Promise<void> {
+    // Serialize starts: two callers must never both pass the idle/interrupted
+    // check while waiting for the same asynchronous teardown.
+    const queued = this.startQueue.then(() => this.startInternal(transport, callbacks));
+    this.startQueue = queued.catch(() => undefined);
+    return queued;
+  }
+
+  private async startInternal(transport: VoiceTransport, callbacks: VoiceTransportCallbacks): Promise<void> {
     if (this.state === "connecting" || this.state === "active" || this.state === "ending") {
       throw new Error("A voice session is already running");
     }
