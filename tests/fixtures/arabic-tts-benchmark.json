@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "purpose": "Balanced offline listening benchmark for ZaLoVoice Arabic TTS candidates",
+  "languages": ["ar-DZ", "ar"],
+  "note": "Darija and MSA have equal sample counts. These are evaluation prompts, not proof that a model supports either variety.",
+  "samples": [
+    {
+      "id": "greeting-01",
+      "category": "greeting",
+      "darija": "السلام عليكم، واش راك اليوم؟",
+      "msa": "السلام عليكم، كيف حالك اليوم؟"
+    },
+    {
+      "id": "assistant-02",
+      "category": "daily_conversation",
+      "darija": "مرحبا بيك، قولّي واش نقدر نعاونك؟",
+      "msa": "أهلًا بك، أخبرني كيف يمكنني مساعدتك؟"
+    },
+    {
+      "id": "transport-03",
+      "category": "transport",
+      "darija": "نحب نطلب طاكسي للمحطة، تقدر تعاونّي؟",
+      "msa": "أريد طلب سيارة أجرة إلى المحطة، هل يمكنك مساعدتي؟"
+    },
+    {
+      "id": "commerce-04",
+      "category": "commerce",
+      "darija": "شحال راهي هاذ السلعة؟ وهل كاين توصيل للدار؟",
+      "msa": "كم سعر هذا المنتج؟ وهل تتوفر خدمة التوصيل إلى المنزل؟"
+    },
+    {
+      "id": "food-05",
+      "category": "food",
+      "darija": "نحب نطلب وجبة، واش كاين في القائمة اليوم؟",
+      "msa": "أريد طلب وجبة، ما الأطباق المتاحة في القائمة اليوم؟"
+    },
+    {
+      "id": "education-06",
+      "category": "education",
+      "darija": "فسّرلي قانون نيوتن الثاني بطريقة بسيطة وبمثال.",
+      "msa": "اشرح لي قانون نيوتن الثاني بطريقة مبسطة مع مثال."
+    },
+    {
+      "id": "information-07",
+      "category": "informational",
+      "darija": "باش نعطيك معلومة صحيحة، لازم نتأكد من المصدر الرسمي.",
+      "msa": "لأقدم لك معلومة دقيقة، ينبغي التحقق من المصدر الرسمي."
+    },
+    {
+      "id": "long-08",
+      "category": "long_form",
+      "darija": "ما تقلقش، نقدر نمشيو خطوة بخطوة. أول حاجة نفهمو طلبك، ومن بعد نقترحو عليك الحلول المناسبة.",
+      "msa": "لا تقلق، يمكننا التقدم خطوة بخطوة. سنفهم طلبك أولًا، ثم نقترح عليك الحلول المناسبة."
+    },
+    {
+      "id": "numbers-09",
+      "category": "numbers",
+      "darija": "عندك ثلاثة مواعيد: التسعة صباحًا، الحداش، والثانية بعد الظهر.",
+      "msa": "لديك ثلاثة مواعيد: الساعة التاسعة صباحًا، والحادية عشرة، والثانية بعد الظهر."
+    },
+    {
+      "id": "safety-10",
+      "category": "safety",
+      "darija": "إذا كانت الحالة مستعجلة، اتصل بالحماية المدنية مباشرة وما تستناش.",
+      "msa": "إذا كانت الحالة طارئة، فاتصل بالحماية المدنية مباشرة ولا تنتظر."
+    }
+  ],
+  "voice_profiles_to_test": ["masculine", "feminine"],
+  "rating_scale": {
+    "1": "poor",
+    "2": "weak",
+    "3": "acceptable",
+    "4": "good",
+    "5": "excellent"
+  }
+}
