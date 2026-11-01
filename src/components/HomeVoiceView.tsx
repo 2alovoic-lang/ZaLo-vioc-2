@@ -465,6 +465,12 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           </div>
         )}
 
+        {transcribedText && (voiceState === 'listening' || voiceState === 'processing') && (
+          <div className="mt-3 max-w-xs rounded-xl border border-cyan-500/30 bg-[#061828]/90 px-4 py-2 text-center text-sm text-white" dir="rtl" aria-live="polite">
+            {transcribedText}
+          </div>
+        )}
+
         {voiceState === 'processing' && (
           <div className="mt-4 flex flex-col items-center animate-fade-in">
             <span className="text-sm font-bold text-cyan-200 tracking-wide">
