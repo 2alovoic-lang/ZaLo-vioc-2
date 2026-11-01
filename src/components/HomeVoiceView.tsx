@@ -44,6 +44,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
   const recognitionRef = useRef<any>(null);
   const processingTimerRef = useRef<any>(null);
+  const finalTranscriptRef = useRef('');
 
   // Initialize Speech Recognition cleanly
   useEffect(() => {
@@ -53,10 +54,13 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
+      // Android Chrome's speech service does not consistently expose ar-DZ.
+      // Use a widely supported Arabic locale for recognition; Darija words
+      // are still sent unchanged to the assistant's language understanding.
       recognition.lang =
         currentLanguage === 'dz' || currentLanguage === 'ar'
-          ? 'ar-DZ'
+          ? 'ar-SA'
           : currentLanguage === 'fr'
           ? 'fr-FR'
           : 'en-US';
@@ -66,14 +70,26 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setTranscribedText(transcript);
-        handleSpeechRecognized(transcript);
+        let finalText = '';
+        let interimText = '';
+        for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const part = result?.[0]?.transcript || '';
+          if (result.isFinal) finalText += part;
+          else interimText += part;
+        }
+        if (interimText) setTranscribedText(interimText);
+        if (finalText.trim()) {
+          const transcript = finalText.trim();
+          finalTranscriptRef.current = transcript;
+          setTranscribedText(transcript);
+          handleSpeechRecognized(transcript);
+        }
       };
 
       recognition.onerror = (event: any) => {
         setVoiceState('idle');
-        const errType = event?.error;
+        const errType = event?.error || 'unknown';
         console.warn('Speech recognition error:', errType);
         if (errType === 'not-allowed') {
           const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح، أو يمكنك كتابة طلبك.';
@@ -86,12 +102,11 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           setAssistantMessage(msg);
           playAudioChime('alert');
           speakTextAloud(msg);
-        } else if (errType === 'network') {
-          const msg = 'تعذر الاتصال بخدمة التعرف الصوتي. يمكنك كتابة طلبك في الحقل أدناه.';
+        } else {
+          const msg = `تعذر التقاط الكلام (${errType}). تحقق من إذن الميكروفون واتصال الإنترنت ثم حاول مجدداً.`;
           setAssistantMessage(msg);
           setShowTextInput(true);
           playAudioChime('alert');
-          speakTextAloud(msg);
         }
       };
 
@@ -114,6 +129,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     stopSpeaking();
     setAssistantMessage(null);
     setTranscribedText('');
+    finalTranscriptRef.current = '';
     playAudioChime('listen');
 
     if (!recognitionRef.current) {
@@ -127,6 +143,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
     try {
       setVoiceState('listening');
+      setAssistantMessage('الميكروفون يعمل. قل جملتك الآن؛ ستظهر كلماتك هنا.');
       recognitionRef.current.start();
     } catch {
       // If recognition was already running or resetting
@@ -143,6 +160,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         }, 120);
       } catch {
         setVoiceState('idle');
+        setAssistantMessage('لم يبدأ التقاط الصوت. اضغط كتابة لإرسال طلبك، أو أعد المحاولة.');
         setShowTextInput(true);
       }
     }
