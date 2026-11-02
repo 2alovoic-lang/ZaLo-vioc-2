@@ -120,14 +120,15 @@ export class VoiceSessionController {
   }
 
   async resume(): Promise<void> {
-    if (this.state !== "interrupted" || !this.transport) {
+    const transport = this.transport;
+    if (this.state !== "interrupted" || !transport) {
       throw new Error("Only an interrupted active session can resume");
     }
-    if (!this.transport.resume) {
+    const resume = transport.resume;
+    if (!resume) {
       throw new Error("This transport does not support safe in-session resume");
     }
-    const transport = this.transport;
-    await transport.resume();
+    await resume.call(transport);
     if (this.transport === transport && this.state === "interrupted") this.setState("active");
   }
 
