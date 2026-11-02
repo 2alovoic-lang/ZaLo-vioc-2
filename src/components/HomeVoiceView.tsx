@@ -240,30 +240,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     playAudioChime('success');
 
     try {
-      // 1. Try unified backend assistant API
-      let data: any = null;
-      try {
-        const response = await fetch('/api/assistant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: transcript.trim(),
-            context: { currentWilaya },
-            language: 'ar',
-          }),
-        });
-
-        if (response.ok) {
-          data = await response.json();
-        }
-      } catch {
-        data = null;
-      }
-
-      // 2. Seamless local NLP fallback
-      if (!data || !data.reply) {
-        data = processLocalNLP(transcript.trim(), currentWilaya);
-      }
+      // Privacy-safe default: never send recognized or typed text to a server
+      // until the UI is wired to the session-scoped consent gate.
+      // Local processing remains available without external transcript sharing.
+      const data = processLocalNLP(transcript.trim(), currentWilaya);
 
       const textToSpeak = data.speechText || data.reply;
       setAssistantMessage(data.reply);
