@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/zalovoice-local-first-transcript-gate
+      - feat/zalovoice-android-speech-adapter-contract
     paths:
       - 'src/neural-core/**'
       - 'src/voice/**'
@@ -17,6 +18,7 @@ on:
       - feat/realtime-fusha-session-foundation
       - feat/zalovoice-neural-core-foundation
       - feat/zalovoice-privacy-session-bridge
+      - arch/android-native-runtime-decision
     paths:
       - 'src/neural-core/**'
       - 'src/voice/**'
