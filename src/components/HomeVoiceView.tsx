@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AccessibilitySettings } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
+import { VoicePrivacyConsent } from '../neural-core/voicePrivacyConsent';
 import { speakWithFullVoice, stopSpeaking, unlockAudio, playAudioChime } from '../utils/speechManager';
 
 interface HomeVoiceViewProps {
@@ -43,6 +44,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const [showTextInput, setShowTextInput] = useState(false);
 
   const recognitionRef = useRef<any>(null);
+  const privacyConsentRef = useRef(new VoicePrivacyConsent());
   const processingTimerRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
   const continuousFushaRef = useRef(false);
@@ -104,6 +106,9 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       };
 
       recognition.onerror = (event: any) => {
+        privacyConsentRef.current.endSession();
+        continuousFushaRef.current = false;
+        pendingFushaRestartRef.current = false;
         setVoiceState('idle');
         const errType = event?.error || 'unknown';
         console.warn('Speech recognition error:', errType);
@@ -147,6 +152,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const startListeningFlow = () => {
     unlockAudio();
     stopSpeaking();
+    privacyConsentRef.current.beginSession();
     continuousFushaRef.current = true;
     pendingFushaRestartRef.current = false;
     assistantSpeakingRef.current = false;
@@ -192,6 +198,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     continuousFushaRef.current = false;
+    privacyConsentRef.current.endSession();
     pendingFushaRestartRef.current = false;
     assistantSpeakingRef.current = false;
     if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
@@ -240,9 +247,9 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     playAudioChime('success');
 
     try {
-      // Privacy-safe default: never send recognized or typed text to a server
-      // until the UI is wired to the session-scoped consent gate.
-      // Local processing remains available without external transcript sharing.
+      // Privacy-safe default: this screen has no cloud transport. Keep all
+      // recognized and typed requests local even if a session consent exists.
+      // A future text adapter must check canSendTranscript() before networking.
       const data = processLocalNLP(transcript.trim(), currentWilaya);
 
       const textToSpeak = data.speechText || data.reply;
