@@ -6,6 +6,7 @@ on:
       - main
       - feat/realtime-fusha-session-foundation
       - feat/zalovoice-neural-core-foundation
+      - feat/zalovoice-privacy-session-bridge
     paths:
       - 'src/neural-core/**'
       - 'src/voice/**'
