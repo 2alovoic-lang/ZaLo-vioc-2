@@ -143,6 +143,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     }
 
     return () => {
+      privacyConsentRef.current.endSession();
+      continuousFushaRef.current = false;
+      pendingFushaRestartRef.current = false;
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
       if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
       // NOTE: We do not call stopSpeaking() here so that speech output
       // continues uninterrupted when navigating to another tab/service!
