@@ -1,4 +1,4 @@
-import type { VoiceTransport, VoiceTransportCallbacks } from "./voiceSessionController";
+import type { VoiceTransport, VoiceTransportCallbacks } from "../neural-core/voiceSessionController";
 
 export type SpeechEngineState =
   | "unsupported"
