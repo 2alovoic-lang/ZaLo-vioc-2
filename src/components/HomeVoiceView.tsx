@@ -166,6 +166,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     playAudioChime('listen');
 
     if (!recognitionRef.current) {
+      privacyConsentRef.current.endSession();
+      continuousFushaRef.current = false;
       const msg = 'التعرف الصوتي المباشر غير مدعوم في هذا المتصفح. يمكنك كتابة طلبك وسأرد عليك صوتياً.';
       setAssistantMessage(msg);
       setShowTextInput(true);
@@ -187,11 +189,15 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
             recognitionRef.current.start();
             setVoiceState('listening');
           } catch {
+            privacyConsentRef.current.endSession();
+            continuousFushaRef.current = false;
             setVoiceState('idle');
             setShowTextInput(true);
           }
         }, 120);
       } catch {
+        privacyConsentRef.current.endSession();
+        continuousFushaRef.current = false;
         setVoiceState('idle');
         setAssistantMessage('لم يبدأ التقاط الصوت. اضغط كتابة لإرسال طلبك، أو أعد المحاولة.');
         setShowTextInput(true);
