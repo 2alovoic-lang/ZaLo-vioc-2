@@ -1,11 +1,22 @@
 name: Neural Core checks
 
 on:
+  push:
+    branches:
+      - fix/zalovoice-local-first-transcript-gate
+    paths:
+      - 'src/neural-core/**'
+      - 'src/voice/**'
+      - 'docs/zalovoice-neural-core.md'
+      - 'package.json'
+      - 'tsconfig.json'
+      - '.github/workflows/neural-core-checks.yml'
   pull_request:
     branches:
       - main
       - feat/realtime-fusha-session-foundation
       - feat/zalovoice-neural-core-foundation
+      - feat/zalovoice-privacy-session-bridge
     paths:
       - 'src/neural-core/**'
       - 'src/voice/**'

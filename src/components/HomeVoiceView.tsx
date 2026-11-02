@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AccessibilitySettings } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
+import { VoicePrivacyConsent } from '../neural-core/voicePrivacyConsent';
 import { speakWithFullVoice, stopSpeaking, unlockAudio, playAudioChime } from '../utils/speechManager';
 
 interface HomeVoiceViewProps {
@@ -43,6 +44,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const [showTextInput, setShowTextInput] = useState(false);
 
   const recognitionRef = useRef<any>(null);
+  const privacyConsentRef = useRef(new VoicePrivacyConsent());
   const processingTimerRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
   const continuousFushaRef = useRef(false);
@@ -104,6 +106,9 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       };
 
       recognition.onerror = (event: any) => {
+        privacyConsentRef.current.endSession();
+        continuousFushaRef.current = false;
+        pendingFushaRestartRef.current = false;
         setVoiceState('idle');
         const errType = event?.error || 'unknown';
         console.warn('Speech recognition error:', errType);
@@ -138,6 +143,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     }
 
     return () => {
+      privacyConsentRef.current.endSession();
+      continuousFushaRef.current = false;
+      pendingFushaRestartRef.current = false;
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
       if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
       // NOTE: We do not call stopSpeaking() here so that speech output
       // continues uninterrupted when navigating to another tab/service!
@@ -147,6 +156,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const startListeningFlow = () => {
     unlockAudio();
     stopSpeaking();
+    privacyConsentRef.current.beginSession();
     continuousFushaRef.current = true;
     pendingFushaRestartRef.current = false;
     assistantSpeakingRef.current = false;
@@ -156,6 +166,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     playAudioChime('listen');
 
     if (!recognitionRef.current) {
+      privacyConsentRef.current.endSession();
+      continuousFushaRef.current = false;
       const msg = 'التعرف الصوتي المباشر غير مدعوم في هذا المتصفح. يمكنك كتابة طلبك وسأرد عليك صوتياً.';
       setAssistantMessage(msg);
       setShowTextInput(true);
@@ -177,11 +189,15 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
             recognitionRef.current.start();
             setVoiceState('listening');
           } catch {
+            privacyConsentRef.current.endSession();
+            continuousFushaRef.current = false;
             setVoiceState('idle');
             setShowTextInput(true);
           }
         }, 120);
       } catch {
+        privacyConsentRef.current.endSession();
+        continuousFushaRef.current = false;
         setVoiceState('idle');
         setAssistantMessage('لم يبدأ التقاط الصوت. اضغط كتابة لإرسال طلبك، أو أعد المحاولة.');
         setShowTextInput(true);
@@ -192,6 +208,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const cancelListeningOrProcessing = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     continuousFushaRef.current = false;
+    privacyConsentRef.current.endSession();
     pendingFushaRestartRef.current = false;
     assistantSpeakingRef.current = false;
     if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
@@ -240,30 +257,10 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     playAudioChime('success');
 
     try {
-      // 1. Try unified backend assistant API
-      let data: any = null;
-      try {
-        const response = await fetch('/api/assistant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: transcript.trim(),
-            context: { currentWilaya },
-            language: 'ar',
-          }),
-        });
-
-        if (response.ok) {
-          data = await response.json();
-        }
-      } catch {
-        data = null;
-      }
-
-      // 2. Seamless local NLP fallback
-      if (!data || !data.reply) {
-        data = processLocalNLP(transcript.trim(), currentWilaya);
-      }
+      // Privacy-safe default: this screen has no cloud transport. Keep all
+      // recognized and typed requests local even if a session consent exists.
+      // A future text adapter must check canSendTranscript() before networking.
+      const data = processLocalNLP(transcript.trim(), currentWilaya);
 
       const textToSpeak = data.speechText || data.reply;
       setAssistantMessage(data.reply);
