@@ -1,3 +1,4 @@
+import { AndroidSpeechBridge, isNativeAndroid } from '../voice/androidSpeechBridge';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Menu,
@@ -68,8 +69,49 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
     }, 450);
   };
 
-  // Initialize Speech Recognition cleanly
+  // Use Android's on-device SpeechRecognizer inside the native app.
   useEffect(() => {
+    if (isNativeAndroid()) {
+      let removed = false;
+      const listeners: Array<{ remove: () => Promise<void> }> = [];
+      recognitionRef.current = {
+        start: () => { void AndroidSpeechBridge.startListening().catch((error) => console.warn('Native speech start failed:', error)); },
+        stop: () => { void AndroidSpeechBridge.stopListening().catch(() => undefined); },
+      };
+      const attach = async () => {
+        listeners.push(await AndroidSpeechBridge.addListener('speechResult', (event) => {
+          const transcript = String(event?.transcript || '').trim();
+          if (!transcript) return;
+          setTranscribedText(transcript);
+          if (event?.isFinal) {
+            finalTranscriptRef.current = transcript;
+            handleSpeechRecognized(transcript);
+          }
+        }));
+        listeners.push(await AndroidSpeechBridge.addListener('speechReady', () => setVoiceState('listening')));
+        listeners.push(await AndroidSpeechBridge.addListener('speechError', (event) => {
+          privacyConsentRef.current.endSession();
+          continuousFushaRef.current = false;
+          setVoiceState('idle');
+          const message = event?.error === 9
+            ? 'إذن الميكروفون غير متاح. اسمح للتطبيق باستخدام الميكروفون من إعدادات الهاتف.'
+            : 'التعرف الصوتي المحلي غير متاح. تأكد من تنزيل حزمة التعرف على العربية على هاتفك.';
+          setAssistantMessage(message);
+          setShowTextInput(true);
+        }));
+        if (removed) await Promise.all(listeners.map((listener) => listener.remove()));
+      };
+      void attach();
+      return () => {
+        removed = true;
+        listeners.forEach((listener) => { void listener.remove(); });
+        void AndroidSpeechBridge.stopListening().catch(() => undefined);
+        recognitionRef.current = null;
+        privacyConsentRef.current.endSession();
+        continuousFushaRef.current = false;
+      };
+    }
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
