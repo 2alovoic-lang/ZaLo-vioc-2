@@ -3,7 +3,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 type SpeechBridgePlugin = {
   startListening(): Promise<void>;
   stopListening(): Promise<void>;
-  speak(options: { text: string; lang?: string; rate?: number }): Promise<void>;
+  speak(options: { text: string; lang?: string; rate?: number }): Promise<{ utteranceId: string }>;
   stopSpeaking(): Promise<void>;
   addListener(eventName: string, listener: (data: any) => void): Promise<{ remove: () => Promise<void> }>;
 };

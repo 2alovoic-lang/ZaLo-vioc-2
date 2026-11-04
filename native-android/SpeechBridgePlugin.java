@@ -114,8 +114,9 @@ public class SpeechBridgePlugin extends Plugin {
       @Override public void onDone(String id) { JSObject data = new JSObject(); data.put("utteranceId", id); notifyListeners("speechSynthesisDone", data); }
       @Override public void onError(String id) { JSObject data = new JSObject(); data.put("utteranceId", id); notifyListeners("speechSynthesisError", data); }
     });
+    JSObject response = new JSObject(); response.put("utteranceId", utteranceId);
+    call.resolve(response);
     tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
-    call.resolve();
   }
 
   @PluginMethod public void stopSpeaking(PluginCall call) {

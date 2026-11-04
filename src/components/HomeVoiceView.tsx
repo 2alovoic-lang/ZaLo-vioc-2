@@ -89,6 +89,12 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           }
         }));
         listeners.push(await AndroidSpeechBridge.addListener('speechReady', () => setVoiceState('listening')));
+        listeners.push(await AndroidSpeechBridge.addListener('speechEnd', () => {
+          recognitionEndedRef.current = true;
+          if (continuousFushaRef.current && pendingFushaRestartRef.current && !assistantSpeakingRef.current) {
+            scheduleFushaRestart();
+          }
+        }));
         listeners.push(await AndroidSpeechBridge.addListener('speechError', (event) => {
           privacyConsentRef.current.endSession();
           continuousFushaRef.current = false;

@@ -198,10 +198,46 @@ export const speakWithFullVoice = async (
     onError?: (err?: any) => void;
   }
 ) => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (typeof window === 'undefined') return;
 
   const cleanText = prepareClearArabicText(text);
   if (!cleanText) return;
+
+  if (isNativeAndroid()) {
+    let expectedId: string | null = null;
+    let doneListener: { remove: () => Promise<void> } | null = null;
+    let errorListener: { remove: () => Promise<void> } | null = null;
+    const cleanup = async () => {
+      await Promise.all([doneListener?.remove(), errorListener?.remove()].filter(Boolean) as Promise<void>[]);
+    };
+    try {
+      await AndroidSpeechBridge.stopSpeaking().catch(() => undefined);
+      doneListener = await AndroidSpeechBridge.addListener('speechSynthesisDone', (event) => {
+        if (expectedId && event?.utteranceId === expectedId) {
+          void cleanup();
+          options?.onEnd?.();
+        }
+      });
+      errorListener = await AndroidSpeechBridge.addListener('speechSynthesisError', (event) => {
+        if (expectedId && event?.utteranceId === expectedId) {
+          void cleanup();
+          options?.onError?.(event);
+        }
+      });
+      const result = await AndroidSpeechBridge.speak({
+        text: cleanText,
+        lang: options?.lang || 'ar',
+        rate: options?.rate ?? 0.92,
+      });
+      expectedId = result.utteranceId;
+    } catch (error) {
+      await cleanup();
+      options?.onError?.(error);
+    }
+    return;
+  }
+
+  if (!window.speechSynthesis) return;
 
   try {
     // Stop any ongoing speech and flush Chromium audio queue cleanly
@@ -277,7 +313,9 @@ export const speakWithFullVoice = async (
 };
 
 export const stopSpeaking = () => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (typeof window === 'undefined') return;
+  if (isNativeAndroid()) { void AndroidSpeechBridge.stopSpeaking().catch(() => undefined); return; }
+  if (!window.speechSynthesis) return;
   try {
     if (keepAliveTimer) {
       clearInterval(keepAliveTimer);
