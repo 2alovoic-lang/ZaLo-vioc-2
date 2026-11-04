@@ -1,3 +1,4 @@
+import { AndroidSpeechBridge, isNativeAndroid } from '../voice/androidSpeechBridge';
 /**
  * Robust Speech Manager for ZaLoVoice
  * Solves:
