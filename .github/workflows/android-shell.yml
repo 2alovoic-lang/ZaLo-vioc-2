@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/zalovoice-capacitor-android-shell
+      - feat/android-native-voice-bridge
     paths:
       - 'src/**'
       - 'native-android/**'
@@ -16,8 +17,10 @@ on:
   pull_request:
     branches:
       - arch/zalovoice-native-speech-runtime-evaluation
+      - feat/android-native-voice-bridge
     paths:
       - 'src/**'
+      - 'native-android/**'
       - 'package.json'
       - 'capacitor.config.ts'
       - 'vite.config.ts'
