@@ -6,6 +6,7 @@ on:
       - feat/zalovoice-capacitor-android-shell
     paths:
       - 'src/**'
+      - 'native-android/**'
       - 'package.json'
       - 'capacitor.config.ts'
       - 'vite.config.ts'
@@ -64,6 +65,8 @@ jobs:
         run: npx cap add android
       - name: Sync Capacitor
         run: npx cap sync android
+      - name: Install native Android speech bridge
+        run: bash native-android/install.sh
       - name: Build debug APK
         run: |
           cd android
