@@ -106,7 +106,8 @@ public class SpeechBridgePlugin extends Plugin {
     if (languageStatus == TextToSpeech.LANG_MISSING_DATA || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
       call.reject("ARABIC_TTS_LANGUAGE_DATA_UNAVAILABLE"); return;
     }
-    tts.setSpeechRate((float) call.getDouble("rate", 0.92));
+    Double requestedRate = call.getDouble("rate");
+    tts.setSpeechRate(requestedRate != null ? requestedRate.floatValue() : 0.92f);
     String utteranceId = UUID.randomUUID().toString();
     tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
       @Override public void onStart(String id) {}
