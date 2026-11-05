@@ -96,7 +96,7 @@ export default function App() {
       : {
           ...defaultUser,
           name: 'مستخدم ZaLoVoice (الجزائر)',
-          phone: '+213 550 12 34 56',
+          phone: '',
           bio: 'مستخدم ZaLoVoice — المساعد الصوتي وإمكانية الوصول الشاملة',
         };
   });
