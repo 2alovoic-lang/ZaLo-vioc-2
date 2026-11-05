@@ -249,6 +249,12 @@ export default function App() {
       document.body.classList.remove('high-contrast');
     }
 
+    if (accessibilitySettings.reducedMotion) {
+      document.body.classList.add('reduce-motion');
+    } else {
+      document.body.classList.remove('reduce-motion');
+    }
+
     // Font scaling classes
     document.body.classList.remove('font-scale-large', 'font-scale-xlarge');
     if (accessibilitySettings.fontSize === 'large') {
