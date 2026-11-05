@@ -28,7 +28,6 @@ export const RealEstateSection: React.FC<RealEstateSectionProps> = ({
   onWilayaChange,
 }) => {
   const [listingType, setListingType] = useState<'all' | 'rent' | 'sale' | 'villa' | 'apartment' | 'house'>('rent');
-  const [bookedId, setBookedId] = useState<string | null>(null);
 
   const filteredListings = listings.filter((item) => {
     const matchesWilaya = !selectedWilaya || selectedWilaya === 'all' || item.wilaya.includes(selectedWilaya);
@@ -99,12 +98,11 @@ export const RealEstateSection: React.FC<RealEstateSectionProps> = ({
             className="bg-[#071d2b] rounded-2xl border border-cyan-500/25 overflow-hidden shadow-lg hover:border-cyan-400/60 transition-all flex flex-col"
           >
             <div className="relative h-44 w-full bg-[#041019] overflow-hidden">
-              <img
-                src={item.images[0] || '/src/assets/images/alger_real_estate_f3_1793230713975.jpg'}
-                alt={item.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover brightness-95 hover:scale-105 transition-transform duration-300"
-              />
+              {item.images[0] ? (
+                <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-cyan-200/50 text-xs">لا توجد صورة للعقار</div>
+              )}
               <div className="absolute top-2.5 right-2.5">
                 <span className="bg-cyan-500/90 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-md">
                   {item.listingType === 'rent' ? 'للإيجار' : item.listingType === 'sale' ? 'للبيع' : 'عطلات'}
@@ -128,11 +126,6 @@ export const RealEstateSection: React.FC<RealEstateSectionProps> = ({
                 </span>
                 <span>·</span>
                 <span className="flex items-center gap-1">
-                  <Bath className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>1 حمام</span>
-                </span>
-                <span>·</span>
-                <span className="flex items-center gap-1">
                   <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{item.surfaceM2} م²</span>
                 </span>
@@ -144,26 +137,26 @@ export const RealEstateSection: React.FC<RealEstateSectionProps> = ({
                   <span className="text-sm font-black text-white font-mono">
                     {item.priceDzd.toLocaleString()} دج
                   </span>
-                  <span className="text-[10px] text-cyan-300/70 font-medium mr-1">/ شهر</span>
+                  {item.period && <span className="text-[10px] text-cyan-300/70 font-medium mr-1">/ {item.period === 'month' ? 'شهر' : item.period === 'year' ? 'سنة' : 'يوم'}</span>}
                 </div>
 
                 <button
-                  onClick={() => {
-                    setBookedId(item.id);
-                    onContactAgent(item);
-                  }}
-                  className={`px-4 py-1.5 rounded-full text-xs font-black transition-all active:scale-95 cursor-pointer shadow-md ${
-                    bookedId === item.id
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25'
-                  }`}
+                  type="button"
+                  disabled
+                  className="px-4 py-1.5 rounded-full text-xs font-black bg-slate-700 text-slate-300 cursor-not-allowed"
+                  title="يتطلب ربط خدمة تواصل حقيقية"
                 >
-                  {bookedId === item.id ? 'تم الطلب' : 'طلب الآن'}
-                </button>
+                  التواصل غير متاح حالياً
+                </button>       </button>
               </div>
             </div>
           </div>
         ))}
+        {filteredListings.length === 0 && (
+          <div className="rounded-2xl border border-cyan-500/20 bg-[#071d2b] p-6 text-center text-sm text-cyan-100/80">
+            لا توجد إعلانات عقارية موثقة متاحة حالياً في هذه الولاية.
+          </div>
+        )}
       </div>
     </div>
   );
