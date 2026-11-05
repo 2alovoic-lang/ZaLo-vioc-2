@@ -250,7 +250,7 @@ export async function handleAssistantRequest(req: any, res: any) {
 
     const trimmedMessage = message.trim();
     const useGoogleSearch = /ابحث|أبحث|ابحث لي|أبحث لي|نحب نلقى|نحب نعرف|دورلي|قلبلي|شوفلي|بحث|دور|وين|أين|أفضل|مطاعم|مطعم|سعر|أسعار|ثمن|تقييم|متاح|مفتوح|آخر|اليوم|الآن|قريب|شراء|كراء|عقار|شقة|طاكسي|فندق|حجز|search|find|near|best|price|latest|today|open|available|restaurant|hotel|taxi|real estate|rent|buy/i.test(trimmedMessage);
-    const currentWilaya = context?.currentWilaya || 'الجزائر العاصمة';
+    const currentWilaya = context?.currentWilaya || 'غير محددة';
 
     // 1. Safe API Key validation (Strictly server-side, never logged)
     const apiKey = process.env.GEMINI_API_KEY;
