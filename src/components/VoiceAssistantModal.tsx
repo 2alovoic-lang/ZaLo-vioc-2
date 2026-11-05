@@ -33,7 +33,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 }) => {
   const [messages, setMessages] = useState<AssistantInteraction[]>(() => {
     try {
-      const saved = sessionStorage.getItem('zalovoice_assistant_history');
+      const saved = localStorage.getItem('zalovoice_assistant_history');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed.slice(-30);
@@ -55,10 +55,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [voiceSpeechEnabled, setVoiceSpeechEnabled] = useState(true);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Keep the current assistant conversation across modal closes and page reloads in this tab.
+  // Keep the assistant conversation on this device across browser sessions.
   useEffect(() => {
     try {
-      sessionStorage.setItem('zalovoice_assistant_history', JSON.stringify(messages.slice(-30)));
+      localStorage.setItem('zalovoice_assistant_history', JSON.stringify(messages.slice(-30)));
     } catch {
       // Storage can be unavailable in private or restricted browsing modes.
     }
@@ -262,7 +262,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       const assistantMsg: AssistantInteraction = {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
-        text: data.reply || 'تمت معالجة طلبك بنجاح.',
+        text: data.reply || 'لم يصل رد صالح من خدمة المساعد. حاول مجدداً.',
         speechText: data.speechText || data.reply,
         timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
         intent: data.intent,
@@ -400,6 +400,11 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
+                  {isAsst && typeof m.isLiveAi === 'boolean' && (
+                    <span className={`inline-flex mt-2 rounded-full px-2 py-0.5 text-[10px] border ${m.isLiveAi ? 'border-emerald-500/30 text-emerald-300 bg-emerald-950/40' : 'border-amber-500/30 text-amber-200 bg-amber-950/30'}`}>
+                      {m.isLiveAi ? 'رد من الذكاء الاصطناعي المباشر' : 'رد محلي محدود — لا يتضمن بحثاً حياً'}
+                    </span>
+                  )}
 
                   {/* Intent & Context Action Buttons */}
                   {isAsst && m.actionData?.targetTab && m.actionData.targetTab !== 'assistant' && (
