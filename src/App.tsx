@@ -198,51 +198,18 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
   });
 
-  // Favorites collection (saved items from real estate, commerce, academic)
+  // Favorites start empty; only items explicitly saved by the user appear here.
   const [favorites, setFavorites] = useState<{ id: string; title: string; type: string; priceOrSubject: string }[]>(() => {
     const saved = localStorage.getItem('zalovoice_favorites');
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: 'fav_1', title: 'شقة F3 مفروشة مطلة على البحر', type: 'عقارات', priceOrSubject: '65,000 دج/شهر' },
-          { id: 'fav_2', title: 'قانون نيوتن الثاني للحركة', type: 'أكاديمي', priceOrSubject: 'فيزياء - بكالوريا' },
-          { id: 'fav_3', title: 'Samsung Galaxy A55 5G', type: 'تجارة', priceOrSubject: '54,000 دج' },
-        ];
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Notifications collection
+  // Notifications start empty; show only events produced by real app actions.
   const [notifications, setNotifications] = useState<
     { id: string; title: string; message: string; time: string; read: boolean; type: 'info' | 'success' | 'alert' }[]
   >(() => {
     const saved = localStorage.getItem('zalovoice_notifications');
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            id: 'notif_1',
-            title: 'مرحباً بك في ZaLoVoice',
-            message: 'تم تفعيل وضع إمكانية الوصول وقارئ الشاشة للمكفوفين بنجاح.',
-            time: 'الآن',
-            read: false,
-            type: 'success',
-          },
-          {
-            id: 'notif_2',
-            title: 'تم حفظ ملخص قانون نيوتن',
-            message: 'يمكنك مراجعة القوانين والمعادلات في أي وقت دون اتصال بالإنترنت.',
-            time: 'منذ ساعتين',
-            read: true,
-            type: 'info',
-          },
-          {
-            id: 'notif_3',
-            title: 'عرض عقاري جديد في الجزائر العاصمة',
-            message: 'تمت إضافة شقق جديدة للإيجار والبيع في حيدرة وباب الزوار.',
-            time: 'أمس',
-            read: true,
-            type: 'info',
-          },
-        ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Chat data persistence
