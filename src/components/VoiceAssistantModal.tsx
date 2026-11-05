@@ -270,6 +270,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         actionData: {
           wilaya: data.parameters?.wilaya || currentWilaya,
           targetTab: data.targetTab,
+          citations: Array.isArray(data.citations) ? data.citations.slice(0, 8) : [],
         },
       };
 
@@ -304,6 +305,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         actionData: {
           wilaya: currentWilaya,
           targetTab: localFallback.targetTab,
+          citations: localFallback.citations || [],
         },
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -400,6 +402,16 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
+                  {isAsst && (m.actionData?.citations?.length || 0) > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/50 space-y-1">
+                      <p className="text-[10px] text-cyan-200 font-semibold">المصادر</p>
+                      {m.actionData!.citations!.filter((source) => source.url).map((source, index) => (
+                        <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-sky-300 underline underline-offset-2 break-all">
+                          {source.title || source.url}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {isAsst && typeof m.isLiveAi === 'boolean' && (
                     <span className={`inline-flex mt-2 rounded-full px-2 py-0.5 text-[10px] border ${m.isLiveAi ? 'border-emerald-500/30 text-emerald-300 bg-emerald-950/40' : 'border-amber-500/30 text-amber-200 bg-amber-950/30'}`}>
                       {m.isLiveAi ? 'رد من الذكاء الاصطناعي المباشر' : 'رد محلي محدود — لا يتضمن بحثاً حياً'}
