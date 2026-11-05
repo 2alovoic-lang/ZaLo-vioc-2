@@ -147,7 +147,7 @@ export const RealEstateSection: React.FC<RealEstateSectionProps> = ({
                   title="يتطلب ربط خدمة تواصل حقيقية"
                 >
                   التواصل غير متاح حالياً
-                </button>       </button>
+                </button>
               </div>
             </div>
           </div>
