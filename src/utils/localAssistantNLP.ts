@@ -26,14 +26,16 @@ export interface LocalNLPResult {
 
 export const processLocalNLP = (
   rawMessage: string,
-  currentWilaya: string = 'الجزائر العاصمة'
+  currentWilaya: string = 'غير محددة'
 ): LocalNLPResult => {
   const message = rawMessage.trim();
   const lower = message.toLowerCase();
 
   // Extract Wilaya if present
-  let wilaya = currentWilaya;
-  if (lower.includes('وهران') || lower.includes('oran')) wilaya = 'وهران (31)';
+  let wilaya = currentWilaya && currentWilaya !== 'غير محددة' ? currentWilaya : 'ولايتك بعد تحديدها';
+  if (lower.includes('ورقلة') || lower.includes('ouargla')) wilaya = 'ورقلة (30)';
+  else if (lower.includes('الجزائر العاصمة') || lower.includes('الجزائر') || lower.includes('algiers')) wilaya = 'الجزائر العاصمة';
+  else if (lower.includes('وهران') || lower.includes('oran')) wilaya = 'وهران (31)';
   else if (lower.includes('قسنطينة') || lower.includes('constantine')) wilaya = 'قسنطينة (25)';
   else if (lower.includes('سطيف') || lower.includes('setif')) wilaya = 'سطيف (19)';
   else if (lower.includes('عنابة') || lower.includes('annaba')) wilaya = 'عنابة (23)';
