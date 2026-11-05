@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import {
   currentUser as defaultUser,
   initialContacts,
@@ -568,6 +568,7 @@ export default function App() {
   };
 
   return (
+    <Suspense fallback={<div className="w-full h-screen flex items-center justify-center bg-[#010914] text-cyan-200" role="status">جارٍ تحميل ZaLoVoice...</div>}>
     <AndroidFrame
       isMobileOnlyMode={isMobileOnlyMode}
       onToggleMode={() => setIsMobileOnlyMode(!isMobileOnlyMode)}
@@ -1264,5 +1265,6 @@ export default function App() {
         lang={user.language}
       />
     </AndroidFrame>
+    </Suspense>
   );
 }
