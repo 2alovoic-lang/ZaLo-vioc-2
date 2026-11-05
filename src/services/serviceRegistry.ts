@@ -85,7 +85,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Academic & Educational Research',
     titleFr: 'Recherche Académique',
     descriptionAr: 'شروحات علمية موثقة وفق مناهج وزارة التربية الوطنية الجزائرية مع المعادلات والمصادر ومسائل البكالوريا.',
-    descriptionEn: 'Accredited scientific explanations, curriculum formulas, and secondary/university research.',
+    descriptionEn: 'Academic explanations are available in limited local form; official curriculum sources are not connected yet.',
     category: 'education',
     icon: 'GraduationCap',
     status: 'in_development',
@@ -96,7 +96,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'academic',
     metrics: {
       },
-    features: ['شرح قانون نيوتن الثاني', 'معادلات التركيب الضوئي', 'خوارزميات البحث الثنائي', 'مراجع رسمية موثقة'],
+    features: ['شرح تمهيدي للموضوعات', 'مصادر المنهاج الرسمي قيد الربط', 'التحقق من المراجع قبل النشر'],
   },
   {
     id: 'commerce',
@@ -105,7 +105,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Marketplace & Commerce',
     titleFr: 'Marché et Produits',
     descriptionAr: 'دليل منتجات قيد الربط بمصادر وبائعين موثوقين؛ لا تتوفر معاملات شراء أو توصيل مؤكدة بعد.',
-    descriptionEn: 'Direct marketplace connecting buyers with verified Algerian sellers across all 58 wilayas.',
+    descriptionEn: 'Product discovery is awaiting trusted listings; purchases and delivery are not available yet.',
     category: 'core',
     icon: 'ShoppingBag',
     status: 'in_development',
@@ -116,7 +116,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'commerce',
     metrics: {
       },
-    features: ['محادثة فورية مع البائع', 'تصفية حسب الولاية', 'ضمان أصالة السلع'],
+    features: ['قوائم المنتجات قيد الربط', 'التحقق من البائعين والأسعار', 'الشراء والتوصيل غير متاحين بعد'],
   },
   {
     id: 'real_estate',
@@ -125,7 +125,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Real Estate & Housing',
     titleFr: 'Immobilier et Logement',
     descriptionAr: 'قسم للبحث العقاري قيد الربط بإعلانات ووكلاء يمكن التحقق منهم.',
-    descriptionEn: 'Rent, buy and lease apartments and villas with verified agents and direct chat inquiry.',
+    descriptionEn: 'Property search is awaiting verified listings and real agent connections.',
     category: 'core',
     icon: 'Home',
     status: 'in_development',
@@ -136,7 +136,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'real_estate',
     metrics: {
       },
-    features: ['شقق مفروشة للكراء', 'بحث بالبلدية والولاية', 'تواصل فوري مع الوكيل'],
+    features: ['إعلانات موثقة قيد الربط', 'بحث حسب الولاية والبلدية', 'التواصل المباشر غير متاح بعد'],
   },
   {
     id: 'taxi',
@@ -145,7 +145,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Taxi & Transport Rides',
     titleFr: 'Taxi et Transport',
     descriptionAr: 'واجهة لإدخال تفاصيل الرحلة؛ طلب السائق والتسعير يتطلبان مزود نقل فعلياً.',
-    descriptionEn: 'Instant fare estimates in DZD and ride booking across Algerian cities and airports.',
+    descriptionEn: 'Trip details can be entered; driver matching, fares and ride booking require a transport provider.',
     category: 'core',
     icon: 'Car',
     status: 'in_development',
@@ -156,7 +156,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'taxi',
     metrics: {
       },
-    features: ['تسعيرة شفافة بالدينار', 'حساب الكيلومترات', 'اختيار نوع السيارة'],
+    features: ['إدخال نقطة الانطلاق والوجهة', 'حساب الأجرة قيد الربط', 'طلب السائق غير متاح بعد'],
   },
   {
     id: 'food',
@@ -165,7 +165,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Restaurants & Algerian Food',
     titleFr: 'Restaurants et Repas',
     descriptionAr: 'دليل مطاعم ووجبات قيد الربط بقوائم وأسعار ومعلومات اتصال محدثة.',
-    descriptionEn: 'Explore authentic Algerian dishes and restaurant menus with fast delivery tracking.',
+    descriptionEn: 'The restaurant directory is awaiting current menus, prices and verified contact sources.',
     category: 'core',
     icon: 'Utensils',
     status: 'in_development',
@@ -176,7 +176,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'food',
     metrics: {
       },
-    features: ['قوائم أسعار واضحة', 'أطباق منزلية تقليدية', 'توصيل محلي'],
+    features: ['قوائم الطعام قيد الربط', 'التحقق من الأسعار والمطاعم', 'الطلب والتوصيل غير متاحين بعد'],
   },
   {
     id: 'bookings',
@@ -185,7 +185,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     titleEn: 'Bookings & Appointments',
     titleFr: 'Réservations et Rendez-vous',
     descriptionAr: 'دليل حجوزات قيد الربط بمزودي خدمات؛ لا يتم تأكيد أي حجز قبل استجابة المزود.',
-    descriptionEn: 'Book clinical consultations, hotel stays, and verified artisan services.',
+    descriptionEn: 'Booking providers are not connected yet; no appointment is confirmed until a provider responds.',
     category: 'core',
     icon: 'Calendar',
     status: 'in_development',
@@ -196,7 +196,7 @@ export const INITIAL_SERVICES: ModularService[] = [
     targetTab: 'bookings',
     metrics: {
       },
-    features: ['مواعيد طبية', 'حجوزات فندقية', 'تأكيد وحفظ بالمفضلة'],
+    features: ['دليل مزودي الحجز قيد الربط', 'التحقق من المواعيد قبل عرضها', 'لا يوجد تأكيد حجز حالياً'],
   },
 
   // --- 2. Health & Medical Care (قيد التطوير / مخطط) ---
