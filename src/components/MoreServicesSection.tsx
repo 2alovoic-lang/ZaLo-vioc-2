@@ -336,36 +336,6 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
         )}
       </div>
 
-      {/* Confirmation Modal */}
-      {alertModalInfo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-sm bg-[#082231] border border-cyan-500/40 rounded-3xl p-5 shadow-2xl space-y-3">
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-cyan-400" />
-                <h3 className="font-bold text-sm">{alertModalInfo.title}</h3>
-              </div>
-              <button
-                onClick={() => setAlertModalInfo(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-slate-200 leading-relaxed">{alertModalInfo.message}</p>
-            <button
-              onClick={() => setAlertModalInfo(null)}
-              className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
-            >
-              حسناً، فهمت
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
