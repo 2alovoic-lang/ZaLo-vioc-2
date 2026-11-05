@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import {
   currentUser as defaultUser,
   initialContacts,
@@ -35,34 +35,34 @@ import {
 } from './types/algeria';
 
 // Existing Chat & Social Components
-import { Sidebar } from './components/Sidebar';
-import { ChatArea } from './components/ChatArea';
-import { ChatInfoPanel } from './components/ChatInfoPanel';
-import { MomentsView } from './components/MomentsView';
-import { CloudView } from './components/CloudView';
-import { ContactsView } from './components/ContactsView';
-import { CallModal } from './components/CallModal';
-import { PollModal } from './components/PollModal';
-import { CreateGroupModal } from './components/CreateGroupModal';
-import { AddFriendModal } from './components/AddFriendModal';
-import { SettingsModal } from './components/SettingsModal';
-import { ImageViewerModal } from './components/ImageViewerModal';
-import { PinLockScreen } from './components/PinLockScreen';
+const Sidebar = React.lazy(() => import('./components/Sidebar').then((module) => ({ default: module.Sidebar })));
+const ChatArea = React.lazy(() => import('./components/ChatArea').then((module) => ({ default: module.ChatArea })));
+const ChatInfoPanel = React.lazy(() => import('./components/ChatInfoPanel').then((module) => ({ default: module.ChatInfoPanel })));
+const MomentsView = React.lazy(() => import('./components/MomentsView').then((module) => ({ default: module.MomentsView })));
+const CloudView = React.lazy(() => import('./components/CloudView').then((module) => ({ default: module.CloudView })));
+const ContactsView = React.lazy(() => import('./components/ContactsView').then((module) => ({ default: module.ContactsView })));
+const CallModal = React.lazy(() => import('./components/CallModal').then((module) => ({ default: module.CallModal })));
+const PollModal = React.lazy(() => import('./components/PollModal').then((module) => ({ default: module.PollModal })));
+const CreateGroupModal = React.lazy(() => import('./components/CreateGroupModal').then((module) => ({ default: module.CreateGroupModal })));
+const AddFriendModal = React.lazy(() => import('./components/AddFriendModal').then((module) => ({ default: module.AddFriendModal })));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal })));
+const ImageViewerModal = React.lazy(() => import('./components/ImageViewerModal').then((module) => ({ default: module.ImageViewerModal })));
+const PinLockScreen = React.lazy(() => import('./components/PinLockScreen').then((module) => ({ default: module.PinLockScreen })));
 
 // ZaLoVoice Mobile Super-App Components
 import { AndroidFrame } from './components/AndroidFrame';
 import { HomeVoiceView } from './components/HomeVoiceView';
-import { AcademicSection } from './components/AcademicSection';
-import { AccessibilityModal } from './components/AccessibilityModal';
-import { MenuDrawer } from './components/MenuDrawer';
-import { VoiceAssistantModal } from './components/VoiceAssistantModal';
-import { CommerceSection } from './components/CommerceSection';
-import { RealEstateSection } from './components/RealEstateSection';
-import { TaxiSection } from './components/TaxiSection';
-import { RestaurantsSection } from './components/RestaurantsSection';
-import { BookingsSection } from './components/BookingsSection';
-import { IntegrationStatusModal } from './components/IntegrationStatusModal';
-import { MoreServicesSection } from './components/MoreServicesSection';
+const AcademicSection = React.lazy(() => import('./components/AcademicSection').then((module) => ({ default: module.AcademicSection })));
+const AccessibilityModal = React.lazy(() => import('./components/AccessibilityModal').then((module) => ({ default: module.AccessibilityModal })));
+const MenuDrawer = React.lazy(() => import('./components/MenuDrawer').then((module) => ({ default: module.MenuDrawer })));
+const VoiceAssistantModal = React.lazy(() => import('./components/VoiceAssistantModal').then((module) => ({ default: module.VoiceAssistantModal })));
+const CommerceSection = React.lazy(() => import('./components/CommerceSection').then((module) => ({ default: module.CommerceSection })));
+const RealEstateSection = React.lazy(() => import('./components/RealEstateSection').then((module) => ({ default: module.RealEstateSection })));
+const TaxiSection = React.lazy(() => import('./components/TaxiSection').then((module) => ({ default: module.TaxiSection })));
+const RestaurantsSection = React.lazy(() => import('./components/RestaurantsSection').then((module) => ({ default: module.RestaurantsSection })));
+const BookingsSection = React.lazy(() => import('./components/BookingsSection').then((module) => ({ default: module.BookingsSection })));
+const IntegrationStatusModal = React.lazy(() => import('./components/IntegrationStatusModal').then((module) => ({ default: module.IntegrationStatusModal })));
+const MoreServicesSection = React.lazy(() => import('./components/MoreServicesSection').then((module) => ({ default: module.MoreServicesSection })));
 import { speakWithFullVoice, stopSpeaking, unlockAudio } from './utils/speechManager';
 
 // Icons
@@ -96,7 +96,7 @@ export default function App() {
       : {
           ...defaultUser,
           name: 'مستخدم ZaLoVoice (الجزائر)',
-          phone: '+213 550 12 34 56',
+          phone: '',
           bio: 'مستخدم ZaLoVoice — المساعد الصوتي وإمكانية الوصول الشاملة',
         };
   });
@@ -115,7 +115,7 @@ export default function App() {
   const [bottomNavTab, setBottomNavTab] = useState<'home' | 'explore' | 'favorites' | 'notifications' | 'account'>('home');
 
   // Algerian Wilaya Context
-  const [currentWilaya, setCurrentWilaya] = useState<string>('الجزائر العاصمة');
+  const [currentWilaya, setCurrentWilaya] = useState<string>('غير محددة');
 
   // Universal Accessibility Settings
   const [accessibilitySettings, setAccessibilitySettings] = useState<AccessibilitySettings>(() => {
@@ -198,51 +198,18 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
   });
 
-  // Favorites collection (saved items from real estate, commerce, academic)
+  // Favorites start empty; only items explicitly saved by the user appear here.
   const [favorites, setFavorites] = useState<{ id: string; title: string; type: string; priceOrSubject: string }[]>(() => {
     const saved = localStorage.getItem('zalovoice_favorites');
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: 'fav_1', title: 'شقة F3 مفروشة مطلة على البحر', type: 'عقارات', priceOrSubject: '65,000 دج/شهر' },
-          { id: 'fav_2', title: 'قانون نيوتن الثاني للحركة', type: 'أكاديمي', priceOrSubject: 'فيزياء - بكالوريا' },
-          { id: 'fav_3', title: 'Samsung Galaxy A55 5G', type: 'تجارة', priceOrSubject: '54,000 دج' },
-        ];
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Notifications collection
+  // Notifications start empty; show only events produced by real app actions.
   const [notifications, setNotifications] = useState<
     { id: string; title: string; message: string; time: string; read: boolean; type: 'info' | 'success' | 'alert' }[]
   >(() => {
     const saved = localStorage.getItem('zalovoice_notifications');
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            id: 'notif_1',
-            title: 'مرحباً بك في ZaLoVoice',
-            message: 'تم تفعيل وضع إمكانية الوصول وقارئ الشاشة للمكفوفين بنجاح.',
-            time: 'الآن',
-            read: false,
-            type: 'success',
-          },
-          {
-            id: 'notif_2',
-            title: 'تم حفظ ملخص قانون نيوتن',
-            message: 'يمكنك مراجعة القوانين والمعادلات في أي وقت دون اتصال بالإنترنت.',
-            time: 'منذ ساعتين',
-            read: true,
-            type: 'info',
-          },
-          {
-            id: 'notif_3',
-            title: 'عرض عقاري جديد في الجزائر العاصمة',
-            message: 'تمت إضافة شقق جديدة للإيجار والبيع في حيدرة وباب الزوار.',
-            time: 'أمس',
-            read: true,
-            type: 'info',
-          },
-        ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Chat data persistence
@@ -280,6 +247,12 @@ export default function App() {
       document.body.classList.add('high-contrast');
     } else {
       document.body.classList.remove('high-contrast');
+    }
+
+    if (accessibilitySettings.reducedMotion) {
+      document.body.classList.add('reduce-motion');
+    } else {
+      document.body.classList.remove('reduce-motion');
     }
 
     // Font scaling classes
@@ -432,94 +405,13 @@ export default function App() {
     }
   };
 
-  // Connecting with product seller directly via ZaLoVoice Chat
+  // External seller and agent messaging is not connected yet. Continue through the assistant without creating fake delivered chats.
   const handleContactSeller = (product: MarketProduct) => {
-    const convId = `conv_seller_${product.id}`;
-    const existingConv = conversations.find((c) => c.id === convId);
-
-    if (!existingConv) {
-      const newConv: Conversation = {
-        id: convId,
-        isGroup: false,
-        name: product.seller.name,
-        avatar: '🛍️',
-        members: [user.id, `seller_${product.id}`],
-        unreadCount: 0,
-        category: 'work',
-        isPinned: true,
-        lastMessage: {
-          text: `مرحباً، أستفسر بخصوص: ${product.title} بسعر ${product.priceDzd.toLocaleString('fr-DZ')} دج`,
-          timestamp: 'الآن',
-          senderId: user.id,
-        },
-      };
-
-      const introMsg: Message = {
-        id: `msg_intro_${Date.now()}`,
-        conversationId: convId,
-        senderId: user.id,
-        text: `السلام عليكم، أنا مهتم بشراء هذا المنتج:\n"${product.title}"\nالسعر: ${product.priceDzd.toLocaleString('fr-DZ')} دج\nالولاية: ${product.wilaya}`,
-        timestamp: 'الآن',
-        status: 'delivered',
-        type: 'text',
-      };
-
-      setConversations([newConv, ...conversations]);
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: [introMsg],
-      }));
-    }
-
-    setActiveConversationId(convId);
-    setCurrentServiceTab('chat');
-    setChatCurrentTab('messages');
-    announceToScreenReader(`تم فتح محادثة مع البائع ${product.seller.name}`);
+    handleVoiceQuery(`أريد معلومات عن المنتج: ${product.title}، والسعر المسجل ${product.priceDzd.toLocaleString('fr-DZ')} دج. هل يمكن التحقق من التفاصيل والتواصل مع البائع؟`);
   };
 
-  // Connecting with Real Estate Agent directly via ZaLoVoice Chat
   const handleContactAgent = (listing: RealEstateListing) => {
-    const convId = `conv_re_${listing.id}`;
-    const existingConv = conversations.find((c) => c.id === convId);
-
-    if (!existingConv) {
-      const newConv: Conversation = {
-        id: convId,
-        isGroup: false,
-        name: listing.agent.name,
-        avatar: '🏡',
-        members: [user.id, `agent_${listing.id}`],
-        unreadCount: 0,
-        category: 'work',
-        isPinned: true,
-        lastMessage: {
-          text: `استفسار عقاري: ${listing.title} في ${listing.wilaya}`,
-          timestamp: 'الآن',
-          senderId: user.id,
-        },
-      };
-
-      const introMsg: Message = {
-        id: `msg_intro_${Date.now()}`,
-        conversationId: convId,
-        senderId: user.id,
-        text: `السلام عليكم، أود معاينة هذا العقار:\n"${listing.title}"\nالموقع: ${listing.wilaya} (${listing.commune})\nالسعر: ${listing.priceDzd.toLocaleString('fr-DZ')} دج`,
-        timestamp: 'الآن',
-        status: 'delivered',
-        type: 'text',
-      };
-
-      setConversations([newConv, ...conversations]);
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: [introMsg],
-      }));
-    }
-
-    setActiveConversationId(convId);
-    setCurrentServiceTab('chat');
-    setChatCurrentTab('messages');
-    announceToScreenReader(`تم فتح محادثة مع الوكيل العقاري ${listing.agent.name}`);
+    handleVoiceQuery(`أريد معلومات عن العقار: ${listing.title} في ${listing.wilaya}، وهل يمكن التحقق من الإعلان والتواصل مع الوكيل؟`);
   };
 
   // Active chat state
@@ -601,6 +493,7 @@ export default function App() {
   };
 
   return (
+    <Suspense fallback={<div className="w-full h-screen flex items-center justify-center bg-[#010914] text-cyan-200" role="status">جارٍ تحميل ZaLoVoice...</div>}>
     <AndroidFrame
       isMobileOnlyMode={isMobileOnlyMode}
       onToggleMode={() => setIsMobileOnlyMode(!isMobileOnlyMode)}
@@ -754,111 +647,21 @@ export default function App() {
             />
           )}
 
-          {/* 8. Full Integrated Chat & Social Layer */}
+          {/* Assistant conversation entry — no simulated social network or delivered messages */}
           {currentServiceTab === 'chat' && (
-            <div className="w-full h-full flex overflow-hidden">
-              <Sidebar
-                currentTab={chatCurrentTab}
-                onTabChange={(tab) => setChatCurrentTab(tab)}
-                conversations={conversations}
-                activeConversationId={activeConversationId}
-                onSelectConversation={(id) => {
-                  setActiveConversationId(id);
-                  setConversations((prev) =>
-                    prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-                  );
-                }}
-                currentUser={user}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onLockApp={() => setIsAppLocked(true)}
-                onOpenAddFriend={() => setIsAddFriendOpen(true)}
-                onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
-                lang={user.language}
-              />
-
-              {chatCurrentTab === 'messages' && (
-                <div className="flex-1 h-full flex overflow-hidden min-w-0">
-                  <ChatArea
-                    conversation={activeConversation}
-                    messages={activeChatMessages}
-                    currentUser={user}
-                    onSendMessage={handleSendMessage}
-                    onVotePoll={() => {}}
-                    onReactMessage={() => {}}
-                    onDeleteMessage={() => {}}
-                    onTogglePinMessage={() => {}}
-                    onOpenCall={(type) =>
-                      setCallState({
-                        isOpen: true,
-                        type,
-                        name: activeConversation.name,
-                        avatar: activeConversation.avatar,
-                      })
-                    }
-                    onToggleInfo={() => setIsInfoOpen(!isInfoOpen)}
-                    onSelectImage={(url) => setActiveLightboxImage(url)}
-                    onOpenPollModal={() => setIsPollModalOpen(true)}
-                    lang={user.language}
-                  />
-
-                  <ChatInfoPanel
-                    conversation={activeConversation}
-                    messages={activeChatMessages}
-                    contacts={contacts}
-                    isOpen={isInfoOpen}
-                    onClose={() => setIsInfoOpen(false)}
-                    onToggleMute={() => {}}
-                    onTogglePin={() => {}}
-                    onClearHistory={() => {}}
-                    onSelectImage={(url) => setActiveLightboxImage(url)}
-                    onChangeWallpaper={() => {}}
-                    lang={user.language}
-                  />
-                </div>
-              )}
-
-              {chatCurrentTab === 'contacts' && (
-                <ContactsView
-                  contacts={contacts}
-                  onSelectContact={(c) => {
-                    const conv = conversations.find((cv) => cv.members.includes(c.id));
-                    if (conv) setActiveConversationId(conv.id);
-                    setChatCurrentTab('messages');
-                  }}
-                  onOpenCall={(c, type) =>
-                    setCallState({
-                      isOpen: true,
-                      type,
-                      name: c.name,
-                      avatar: c.avatar,
-                    })
-                  }
-                  onOpenAddFriend={() => setIsAddFriendOpen(true)}
-                  onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
-                  lang={user.language}
-                />
-              )}
-
-              {chatCurrentTab === 'moments' && (
-                <MomentsView
-                  moments={moments}
-                  currentUser={user}
-                  onAddPost={() => {}}
-                  onLikePost={() => {}}
-                  onAddComment={() => {}}
-                  onSelectImage={(url) => setActiveLightboxImage(url)}
-                  lang={user.language}
-                />
-              )}
-
-              {chatCurrentTab === 'cloud' && (
-                <CloudView
-                  items={cloudItems}
-                  onAddItem={() => {}}
-                  onDeleteItem={() => {}}
-                  lang={user.language}
-                />
-              )}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4 p-8 text-center bg-[#030f17]">
+              <div className="w-16 h-16 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 flex items-center justify-center">
+                <MessageCircle className="w-8 h-8" aria-hidden="true" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">محادثة ZaLoVoice</h2>
+              <p className="max-w-sm text-sm text-slate-300">تابع حوارك مع المساعد. يحتفظ التطبيق بسجل المحادثة على هذا الجهاز، أما مراسلة البائعين والأشخاص الآخرين فتتطلب ربط خدمة رسائل حقيقية.</p>
+              <button
+                type="button"
+                onClick={() => setIsVoiceAssistantOpen(true)}
+                className="px-5 py-2.5 rounded-full bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 transition-colors"
+              >
+                متابعة المحادثة
+              </button>
             </div>
           )}
 
@@ -1278,5 +1081,6 @@ export default function App() {
         lang={user.language}
       />
     </AndroidFrame>
+    </Suspense>
   );
 }

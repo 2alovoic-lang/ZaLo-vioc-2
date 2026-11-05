@@ -26,7 +26,7 @@ export async function handleHealthCheck(req: any, res: any) {
       geminiAi: {
         configured: isGeminiConfigured,
         model: 'gemini-3.8-flash',
-        status: isGeminiConfigured ? 'configured' : 'pending_key',
+        status: isGeminiConfigured ? 'configured_not_live_tested' : 'pending_key',
       },
       supabase: {
         configured: isSupabaseConfigured,

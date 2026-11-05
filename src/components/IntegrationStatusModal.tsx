@@ -70,7 +70,7 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm">حالة التكاملات والربط التقني (ZaLoVioc Architecture)</h3>
-              <p className="text-[11px] text-slate-400">فحص حي للتكاملات الحقيقية والمفاتيح السرية</p>
+              <p className="text-[11px] text-slate-400">حالة إعداد التكاملات والاختبارات المتاحة</p>
             </div>
           </div>
           <button
@@ -103,13 +103,13 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
                   </div>
                   <h4 className="font-bold text-xs text-slate-900">Gemini 3.8 Flash (AI)</h4>
                 </div>
-                {healthData?.integrations?.geminiAi?.configured ? (
+                {healthData?.integrations?.geminiAi?.status === 'live_verified' ? (
                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    <CheckCircle className="w-3 h-3" /> متصل
+                    <CheckCircle className="w-3 h-3" /> تم اختبار الاتصال
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
-                    محلل محلي + جاهز
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                    {healthData?.integrations?.geminiAi?.configured ? 'المفتاح مهيأ — لم يُختبر الاتصال' : 'المفتاح غير مهيأ'}
                   </span>
                 )}
               </div>
@@ -117,7 +117,7 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
                 {healthData?.integrations?.geminiAi?.message || 'المسار البرمجي /api/assistant مهيأ بالكامل.'}
               </p>
               <div className="text-[10px] text-slate-400 font-mono">
-                المسار: Express Server-side Route (مفتاح سري محمي)
+                المسار: Server-side API Route (المفتاح محفوظ على الخادم)
               </div>
             </div>
 
@@ -130,13 +130,13 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
                   </div>
                   <h4 className="font-bold text-xs text-slate-900">Supabase PostgreSQL</h4>
                 </div>
-                {supabaseLocal.configured ? (
+                {healthData?.integrations?.supabase?.status === 'live_verified' ? (
                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    <CheckCircle className="w-3 h-3" /> متصل
+                    <CheckCircle className="w-3 h-3" /> تم اختبار الاتصال
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-md">
-                    في انتظار المفتاح
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                    {supabaseLocal.configured ? 'الإعدادات مهيأة — لم يُختبر الاتصال' : 'الإعدادات غير مكتملة'}
                   </span>
                 )}
               </div>
@@ -169,7 +169,7 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                يعتمد على Web Geolocation API المدمجة لتحديد الإحداثيات الحية داخل الجزائر وحساب المسافات بين البليدات.
+                يعتمد على موافقة المستخدم على Web Geolocation API. لم يتم اختبار GPS على جهازك بعد، ولا يتم إرسال طلب نقل فعلي من هذه الواجهة.
               </p>
             </div>
 
