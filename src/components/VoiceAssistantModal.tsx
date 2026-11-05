@@ -189,7 +189,16 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: query,
-            context: { currentWilaya },
+            context: {
+              currentWilaya,
+              history: messages
+                .filter((item) => item.sender === 'user' || item.sender === 'assistant')
+                .slice(-16)
+                .map((item) => ({
+                  role: item.sender,
+                  content: item.text,
+                })),
+            },
             language: 'ar',
           }),
         });
