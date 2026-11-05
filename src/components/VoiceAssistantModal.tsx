@@ -382,7 +382,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                     {isAsst && (
                       <span className="flex items-center gap-1 text-slate-400">
                         <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                        <span>{m.isLiveAi ? 'Gemini 3.8 Flash' : 'NLP محلي'}</span>
+                        <span>{m.isLiveAi ? 'ذكاء اصطناعي مباشر' : 'NLP محلي'}</span>
                       </span>
                     )}
                   </div>
