@@ -25,18 +25,18 @@ export const initialMoments: MomentPost[] = [];
 export const initialCloudItems: CloudItem[] = [];
 
 export const STICKER_LIST = [
-  { id: 'stk_1', icon: '❤️', label: 'Yêu thương' },
-  { id: 'stk_2', icon: '🎉', label: 'Ăn mừng' },
-  { id: 'stk_3', icon: '🔥', label: 'Nhiệt huyết' },
-  { id: 'stk_4', icon: '🚀', label: 'Tăng tốc' },
-  { id: 'stk_5', icon: '✨', label: 'Lấp lánh' },
-  { id: 'stk_6', icon: '☕', label: 'Cà phê' },
-  { id: 'stk_7', icon: '👏', label: 'Vỗ tay' },
-  { id: 'stk_8', icon: '🤩', label: 'Thích thú' },
-  { id: 'stk_9', icon: '🥳', label: 'Party' },
-  { id: 'stk_10', icon: '💪', label: 'Cố lên' },
-  { id: 'stk_11', icon: '💯', label: 'Xuất sắc' },
-  { id: 'stk_12', icon: '🌸', label: 'Hoa sen' },
+  { id: 'stk_1', icon: '❤️', label: 'حب' },
+  { id: 'stk_2', icon: '🎉', label: 'احتفال' },
+  { id: 'stk_3', icon: '🔥', label: 'حماس' },
+  { id: 'stk_4', icon: '🚀', label: 'انطلاق' },
+  { id: 'stk_5', icon: '✨', label: 'بريق' },
+  { id: 'stk_6', icon: '☕', label: 'قهوة' },
+  { id: 'stk_7', icon: '👏', label: 'تصفيق' },
+  { id: 'stk_8', icon: '🤩', label: 'إعجاب' },
+  { id: 'stk_9', icon: '🥳', label: 'حفلة' },
+  { id: 'stk_10', icon: '💪', label: 'تشجيع' },
+  { id: 'stk_11', icon: '💯', label: 'ممتاز' },
+  { id: 'stk_12', icon: '🌸', label: 'زهرة' },
 ];
 
 export const EMOJI_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '😡'];
