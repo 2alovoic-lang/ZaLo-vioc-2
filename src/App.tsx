@@ -399,94 +399,13 @@ export default function App() {
     }
   };
 
-  // Connecting with product seller directly via ZaLoVoice Chat
+  // External seller and agent messaging is not connected yet. Continue through the assistant without creating fake delivered chats.
   const handleContactSeller = (product: MarketProduct) => {
-    const convId = `conv_seller_${product.id}`;
-    const existingConv = conversations.find((c) => c.id === convId);
-
-    if (!existingConv) {
-      const newConv: Conversation = {
-        id: convId,
-        isGroup: false,
-        name: product.seller.name,
-        avatar: '🛍️',
-        members: [user.id, `seller_${product.id}`],
-        unreadCount: 0,
-        category: 'work',
-        isPinned: true,
-        lastMessage: {
-          text: `مرحباً، أستفسر بخصوص: ${product.title} بسعر ${product.priceDzd.toLocaleString('fr-DZ')} دج`,
-          timestamp: 'الآن',
-          senderId: user.id,
-        },
-      };
-
-      const introMsg: Message = {
-        id: `msg_intro_${Date.now()}`,
-        conversationId: convId,
-        senderId: user.id,
-        text: `السلام عليكم، أنا مهتم بشراء هذا المنتج:\n"${product.title}"\nالسعر: ${product.priceDzd.toLocaleString('fr-DZ')} دج\nالولاية: ${product.wilaya}`,
-        timestamp: 'الآن',
-        status: 'delivered',
-        type: 'text',
-      };
-
-      setConversations([newConv, ...conversations]);
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: [introMsg],
-      }));
-    }
-
-    setActiveConversationId(convId);
-    setCurrentServiceTab('chat');
-    setChatCurrentTab('messages');
-    announceToScreenReader(`تم فتح محادثة مع البائع ${product.seller.name}`);
+    handleVoiceQuery(`أريد معلومات عن المنتج: ${product.title}، والسعر المسجل ${product.priceDzd.toLocaleString('fr-DZ')} دج. هل يمكن التحقق من التفاصيل والتواصل مع البائع؟`);
   };
 
-  // Connecting with Real Estate Agent directly via ZaLoVoice Chat
   const handleContactAgent = (listing: RealEstateListing) => {
-    const convId = `conv_re_${listing.id}`;
-    const existingConv = conversations.find((c) => c.id === convId);
-
-    if (!existingConv) {
-      const newConv: Conversation = {
-        id: convId,
-        isGroup: false,
-        name: listing.agent.name,
-        avatar: '🏡',
-        members: [user.id, `agent_${listing.id}`],
-        unreadCount: 0,
-        category: 'work',
-        isPinned: true,
-        lastMessage: {
-          text: `استفسار عقاري: ${listing.title} في ${listing.wilaya}`,
-          timestamp: 'الآن',
-          senderId: user.id,
-        },
-      };
-
-      const introMsg: Message = {
-        id: `msg_intro_${Date.now()}`,
-        conversationId: convId,
-        senderId: user.id,
-        text: `السلام عليكم، أود معاينة هذا العقار:\n"${listing.title}"\nالموقع: ${listing.wilaya} (${listing.commune})\nالسعر: ${listing.priceDzd.toLocaleString('fr-DZ')} دج`,
-        timestamp: 'الآن',
-        status: 'delivered',
-        type: 'text',
-      };
-
-      setConversations([newConv, ...conversations]);
-      setMessages((prev) => ({
-        ...prev,
-        [convId]: [introMsg],
-      }));
-    }
-
-    setActiveConversationId(convId);
-    setCurrentServiceTab('chat');
-    setChatCurrentTab('messages');
-    announceToScreenReader(`تم فتح محادثة مع الوكيل العقاري ${listing.agent.name}`);
+    handleVoiceQuery(`أريد معلومات عن العقار: ${listing.title} في ${listing.wilaya}، وهل يمكن التحقق من الإعلان والتواصل مع الوكيل؟`);
   };
 
   // Active chat state
@@ -722,130 +641,21 @@ export default function App() {
             />
           )}
 
-          {/* 8. Full Integrated Chat & Social Layer */}
+          {/* Assistant conversation entry — no simulated social network or delivered messages */}
           {currentServiceTab === 'chat' && (
-            <div className="w-full h-full flex overflow-hidden">
-              <Sidebar
-                currentTab={chatCurrentTab}
-                onTabChange={(tab) => setChatCurrentTab(tab)}
-                conversations={conversations}
-                activeConversationId={activeConversationId}
-                onSelectConversation={(id) => {
-                  setActiveConversationId(id);
-                  setConversations((prev) =>
-                    prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-                  );
-                }}
-                currentUser={user}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onLockApp={() => setIsAppLocked(true)}
-                onOpenAddFriend={() => setIsAddFriendOpen(true)}
-                onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
-                lang={user.language}
-              />
-
-              {chatCurrentTab === 'messages' && (activeConversation ? (
-                <div className="flex-1 h-full flex overflow-hidden min-w-0">
-                  <ChatArea
-                    conversation={activeConversation}
-                    messages={activeChatMessages}
-                    currentUser={user}
-                    onSendMessage={handleSendMessage}
-                    onVotePoll={() => {}}
-                    onReactMessage={() => {}}
-                    onDeleteMessage={() => {}}
-                    onTogglePinMessage={() => {}}
-                    onOpenCall={(type) =>
-                      setCallState({
-                        isOpen: true,
-                        type,
-                        name: activeConversation.name,
-                        avatar: activeConversation.avatar,
-                      })
-                    }
-                    onToggleInfo={() => setIsInfoOpen(!isInfoOpen)}
-                    onSelectImage={(url) => setActiveLightboxImage(url)}
-                    onOpenPollModal={() => setIsPollModalOpen(true)}
-                    lang={user.language}
-                  />
-
-                  <ChatInfoPanel
-                    conversation={activeConversation}
-                    messages={activeChatMessages}
-                    contacts={contacts}
-                    isOpen={isInfoOpen}
-                    onClose={() => setIsInfoOpen(false)}
-                    onToggleMute={() => {}}
-                    onTogglePin={() => {}}
-                    onClearHistory={() => {}}
-                    onSelectImage={(url) => setActiveLightboxImage(url)}
-                    onChangeWallpaper={() => {}}
-                    lang={user.language}
-                  />
-                </div>
-              ) : (
-                <div className="flex-1 min-w-0 flex flex-col items-center justify-center gap-4 p-8 text-center bg-slate-50">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                    <MessageCircle className="w-8 h-8" aria-hidden="true" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-slate-800">لا توجد محادثات بعد</h2>
-                  <p className="max-w-sm text-sm text-slate-500">ابدأ البحث أو اطرح سؤالك على مساعد ZaLoVoice. ستظهر هنا فقط المحادثات التي تنشئها فعلياً.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentServiceTab('home');
-                      setBottomNavTab('home');
-                      setIsVoiceAssistantOpen(true);
-                    }}
-                    className="px-5 py-2.5 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    ابدأ محادثة
-                  </button>
-                </div>
-              ))}
-
-              {chatCurrentTab === 'contacts' && (
-                <ContactsView
-                  contacts={contacts}
-                  onSelectContact={(c) => {
-                    const conv = conversations.find((cv) => cv.members.includes(c.id));
-                    if (conv) setActiveConversationId(conv.id);
-                    setChatCurrentTab('messages');
-                  }}
-                  onOpenCall={(c, type) =>
-                    setCallState({
-                      isOpen: true,
-                      type,
-                      name: c.name,
-                      avatar: c.avatar,
-                    })
-                  }
-                  onOpenAddFriend={() => setIsAddFriendOpen(true)}
-                  onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
-                  lang={user.language}
-                />
-              )}
-
-              {chatCurrentTab === 'moments' && (
-                <MomentsView
-                  moments={moments}
-                  currentUser={user}
-                  onAddPost={() => {}}
-                  onLikePost={() => {}}
-                  onAddComment={() => {}}
-                  onSelectImage={(url) => setActiveLightboxImage(url)}
-                  lang={user.language}
-                />
-              )}
-
-              {chatCurrentTab === 'cloud' && (
-                <CloudView
-                  items={cloudItems}
-                  onAddItem={() => {}}
-                  onDeleteItem={() => {}}
-                  lang={user.language}
-                />
-              )}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4 p-8 text-center bg-[#030f17]">
+              <div className="w-16 h-16 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 flex items-center justify-center">
+                <MessageCircle className="w-8 h-8" aria-hidden="true" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">محادثة ZaLoVoice</h2>
+              <p className="max-w-sm text-sm text-slate-300">تابع حوارك مع المساعد. يحتفظ التطبيق بسجل المحادثة على هذا الجهاز، أما مراسلة البائعين والأشخاص الآخرين فتتطلب ربط خدمة رسائل حقيقية.</p>
+              <button
+                type="button"
+                onClick={() => setIsVoiceAssistantOpen(true)}
+                className="px-5 py-2.5 rounded-full bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 transition-colors"
+              >
+                متابعة المحادثة
+              </button>
             </div>
           )}
 
