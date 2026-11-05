@@ -32,7 +32,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ bookings }) =>
       <div className="space-y-3">
         {bookings.map((booking) => (
           <div key={booking.id} className="rounded-2xl bg-[#071d2b] border border-cyan-500/25 p-4">
-            <h3 className="font-bold">{booking.name}</h3>
+            <h3 className="font-bold">{booking.title}</h3>
             <p className="text-xs text-cyan-200/70 mt-1">{booking.description}</p>
             <p className="text-xs text-cyan-300 mt-2">الحجز المباشر غير متاح حتى ربط مزود حقيقي.</p>
           </div>
