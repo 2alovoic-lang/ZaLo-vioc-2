@@ -40,6 +40,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const [transcribedText, setTranscribedText] = useState('');
   const [assistantMessage, setAssistantMessage] = useState<string | null>(null);
   const [assistantSpeechText, setAssistantSpeechText] = useState<string | null>(null);
+  const [assistantIsLiveAi, setAssistantIsLiveAi] = useState(false);
+  const [assistantSources, setAssistantSources] = useState<Array<{ title?: string; url?: string }>>([]);
   const [showTextInput, setShowTextInput] = useState(false);
 
   const recognitionRef = useRef<any>(null);
@@ -208,6 +210,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       const textToSpeak = data.speechText || data.reply;
       setAssistantMessage(data.reply);
       setAssistantSpeechText(textToSpeak);
+      setAssistantIsLiveAi(data.isAiLive === true);
+      setAssistantSources(Array.isArray(data.citations) ? data.citations.filter((source: any) => typeof source?.url === 'string').slice(0, 6) : []);
 
       // Spoken voice reply in clear Arabic
       speakTextAloud(textToSpeak);
@@ -229,6 +233,8 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       const textToSpeak = fallback.speechText || fallback.reply;
       setAssistantMessage(fallback.reply);
       setAssistantSpeechText(textToSpeak);
+      setAssistantIsLiveAi(false);
+      setAssistantSources([]);
       speakTextAloud(textToSpeak);
       if (fallback.actionType === 'navigate_to_tab' && fallback.targetTab && fallback.targetTab !== 'home') {
         const target = fallback.targetTab;
@@ -580,6 +586,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
                 onClick={() => {
                   stopSpeaking();
                   setAssistantMessage(null);
+                  setAssistantSources([]);
                 }}
                 className="text-cyan-400 hover:text-white"
               >
@@ -588,6 +595,16 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
             </div>
           </div>
           <p className="leading-relaxed">{assistantMessage}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] border ${assistantIsLiveAi ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-200'}`}>
+              {assistantIsLiveAi ? 'رد مباشر من الذكاء الاصطناعي' : 'رد محلي محدود — دون بحث حي'}
+            </span>
+            {assistantSources.map((source, index) => (
+              <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-sky-300 underline break-all">
+                {source.title || 'المصدر'}
+              </a>
+            ))}
+          </div>
         </div>
       )}
 
