@@ -41,7 +41,17 @@ export async function generateOpenAIAssistantResponse(message: string, context: 
         model: process.env.OPENAI_MODEL || 'gpt-5.5',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: JSON.stringify({ message, context }) },
+          ...((Array.isArray(context.history) ? context.history : [])
+            .filter((item: any) =>
+              item && (item.role === 'user' || item.role === 'assistant') &&
+              typeof item.content === 'string' && item.content.trim()
+            )
+            .slice(-16)
+            .map((item: any) => ({
+              role: item.role,
+              content: item.content.slice(0, 4000),
+            }))),
+          { role: 'user', content: message.trim() },
         ],
         response_format: { type: 'json_object' },
         max_completion_tokens: 900,
