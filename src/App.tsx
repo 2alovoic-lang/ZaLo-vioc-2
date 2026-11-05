@@ -115,7 +115,7 @@ export default function App() {
   const [bottomNavTab, setBottomNavTab] = useState<'home' | 'explore' | 'favorites' | 'notifications' | 'account'>('home');
 
   // Algerian Wilaya Context
-  const [currentWilaya, setCurrentWilaya] = useState<string>('الجزائر العاصمة');
+  const [currentWilaya, setCurrentWilaya] = useState<string>('غير محددة');
 
   // Universal Accessibility Settings
   const [accessibilitySettings, setAccessibilitySettings] = useState<AccessibilitySettings>(() => {
