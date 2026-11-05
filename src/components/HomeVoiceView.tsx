@@ -507,11 +507,13 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="اكتب طلبك..."
+              aria-label="اكتب طلبك إلى مساعد ZaLoVoice"
               className="flex-1 text-xs bg-transparent border-none focus:outline-none text-white placeholder-cyan-300/40 px-2"
               autoFocus
             />
             <button
               type="submit"
+              aria-label="إرسال الطلب"
               disabled={!inputText.trim()}
               className="w-7 h-7 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center font-bold"
             >
@@ -568,7 +570,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
 
       {/* Conversational Assistant Card (If spoken answer displayed) */}
       {assistantMessage && (
-        <div className="mx-4 mb-2 p-3 rounded-2xl bg-[#061828]/95 border border-cyan-500/40 text-xs text-cyan-100 shadow-2xl relative z-30 animate-fade-in backdrop-blur-md">
+        <div role="status" aria-live="polite" aria-atomic="true" className="mx-4 mb-2 p-3 rounded-2xl bg-[#061828]/95 border border-cyan-500/40 text-xs text-cyan-100 shadow-2xl relative z-30 animate-fade-in backdrop-blur-md">
           <div className="flex items-center justify-between mb-1.5 text-[11px] text-cyan-300 font-bold">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
