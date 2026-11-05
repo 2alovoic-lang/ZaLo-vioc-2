@@ -743,7 +743,7 @@ export default function App() {
                 lang={user.language}
               />
 
-              {chatCurrentTab === 'messages' && (
+              {chatCurrentTab === 'messages' && (activeConversation ? (
                 <div className="flex-1 h-full flex overflow-hidden min-w-0">
                   <ChatArea
                     conversation={activeConversation}
@@ -782,7 +782,26 @@ export default function App() {
                     lang={user.language}
                   />
                 </div>
-              )}
+              ) : (
+                <div className="flex-1 min-w-0 flex flex-col items-center justify-center gap-4 p-8 text-center bg-slate-50">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <MessageCircle className="w-8 h-8" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-800">لا توجد محادثات بعد</h2>
+                  <p className="max-w-sm text-sm text-slate-500">ابدأ البحث أو اطرح سؤالك على مساعد ZaLoVoice. ستظهر هنا فقط المحادثات التي تنشئها فعلياً.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentServiceTab('home');
+                      setBottomNavTab('home');
+                      setIsVoiceAssistantOpen(true);
+                    }}
+                    className="px-5 py-2.5 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    ابدأ محادثة
+                  </button>
+                </div>
+              ))}
 
               {chatCurrentTab === 'contacts' && (
                 <ContactsView
