@@ -272,17 +272,23 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         {/* Left balance spacer */}
         <div className="w-11" />
 
-        {/* Brand Logo in Center: 5 vertical soundwave bars + '2alovoic' */}
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => speakTextAloud('أهلاً بك في زالو فويس')}>
-          <div className="flex items-center gap-1 h-6">
-            <span className="w-1 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" />
-            <span className="w-1 h-4 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" />
-            <span className="w-1.5 h-6 rounded-full bg-cyan-300 shadow-[0_0_12px_#00e5ff]" />
-            <span className="w-1 h-4 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" />
-            <span className="w-1 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight text-white font-sans drop-shadow-[0_0_12px_rgba(0,229,255,0.3)]">
-            2alovoic
+        {/* ZALO wordmark: metallic 3D letters in the approved blue, cyan and gold palette */}
+        <div
+          className="select-none cursor-default"
+          aria-label="ZALO"
+        >
+          <span
+            className="text-[27px] font-black italic tracking-[0.08em] font-sans"
+            style={{
+              background: 'linear-gradient(180deg, #ffffff 0%, #dcecff 28%, #f7cf63 52%, #ffffff 72%, #83cfff 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+              WebkitTextStroke: '0.35px rgba(255,255,255,0.65)',
+              filter: 'drop-shadow(0 2px 0 #073b82) drop-shadow(0 0 10px rgba(0,190,255,0.5))',
+            }}
+          >
+            ZALO
           </span>
         </div>
 
@@ -370,7 +376,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
             {/* The Main Glowing Sphere & Microphone Button */}
             <button
               onClick={voiceState === 'listening' ? cancelListeningOrProcessing : startListeningFlow}
-              aria-label={voiceState === 'listening' ? 'جارٍ الاستماع، اضغط للإيقاف' : 'اضغط للتحدث مع 2alovoic'}
+              aria-label={voiceState === 'listening' ? 'جارٍ الاستماع، اضغط للإيقاف' : 'اضغط لبدء المحادثة الصوتية'}
               className={`relative z-10 w-[176px] h-[176px] rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 group ${
                 voiceState === 'listening'
                   ? 'ring-4 ring-cyan-300/80 scale-105'
@@ -378,11 +384,11 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
               }`}
               style={{
                 background: 'radial-gradient(circle at 50% 50%, #021a36 0%, #032348 48%, #006ddb 84%, #00d9ff 97%, #ffffff 100%)',
-                border: '3px solid #00f0ff',
+                border: '3px solid #53dfff',
                 boxShadow:
                   voiceState === 'listening'
                     ? '0 0 70px #00e5ff, inset 0 0 35px #00e5ff, 0 0 120px rgba(0, 229, 255, 0.6)'
-                    : '0 0 45px rgba(0, 229, 255, 0.8), inset 0 0 25px rgba(0, 229, 255, 0.9), 0 0 90px rgba(0, 160, 255, 0.35)',
+                    : '0 0 42px rgba(0, 190, 255, 0.78), inset 0 0 24px rgba(0, 229, 255, 0.86), 0 0 76px rgba(0, 110, 255, 0.34), 0 0 16px rgba(247, 195, 75, 0.20)',
               }}
             >
               {voiceState === 'processing' ? (
@@ -436,7 +442,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
         {voiceState === 'listening' && (
           <div className="mt-4 flex flex-col items-center animate-fade-in">
             <span className="text-sm font-bold text-cyan-200 tracking-wide drop-shadow-[0_0_8px_#00e5ff]">
-              أستمع إليك الآن... تحدث
+              أستمع إليك الآن...
             </span>
             <button
               onClick={cancelListeningOrProcessing}
