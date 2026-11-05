@@ -70,7 +70,7 @@ export const IntegrationStatusModal: React.FC<IntegrationStatusModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm">حالة التكاملات والربط التقني (ZaLoVioc Architecture)</h3>
-              <p className="text-[11px] text-slate-400">فحص حي للتكاملات الحقيقية والمفاتيح السرية</p>
+              <p className="text-[11px] text-slate-400">حالة إعداد التكاملات والاختبارات المتاحة</p>
             </div>
           </div>
           <button
