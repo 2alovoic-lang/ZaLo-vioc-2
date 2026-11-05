@@ -21,7 +21,7 @@ export const getSupabaseStatus = () => {
     configured: isSupabaseConfigured,
     url: supabaseUrl || 'غير معرّف',
     statusText: isSupabaseConfigured
-      ? 'متصل بقاعدة بيانات Supabase PostgreSQL'
+      ? 'إعدادات Supabase موجودة؛ لم يتم اختبار اتصال حي في هذا الفحص'
       : 'قيد انتظار إدخال VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY',
     instructions: [
       '1. أنشئ مشروعاً جديداً مجانياً على supabase.com',
