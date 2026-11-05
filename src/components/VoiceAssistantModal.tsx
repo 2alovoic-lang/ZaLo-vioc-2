@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { AssistantInteraction } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
-import { speakWithFullVoice, stopSpeaking, playAudioChime } from '../utils/speechManager';
+import { speakWithFullVoice, stopSpeaking, playAudioChime, unlockAudio } from '../utils/speechManager';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -66,6 +66,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
 
   const recognitionRef = useRef<any>(null);
+  const handleSendMessageRef = useRef<(textToSend?: string) => Promise<void>>(async () => {});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedInitialQueryRef = useRef<string | null>(null);
   const autoNavigateTimerRef = useRef<any>(null);
@@ -111,13 +112,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = 'ar-DZ'; // Algerian Arabic
+      // ar-DZ preserves Algerian speech recognition where the device supports it.
+      recognition.lang = 'ar-DZ';
 
+      recognition.onstart = () => setIsListening(true);
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText(transcript);
+        const resultIndex = typeof event.resultIndex === 'number' ? event.resultIndex : 0;
+        const transcript = event.results?.[resultIndex]?.[0]?.transcript?.trim();
         setIsListening(false);
-        handleSendMessage(transcript);
+        if (!transcript) {
+          setNoticeMessage('لم يصلني نص واضح من الميكروفون. حاول مرة أخرى أو اكتب طلبك.');
+          return;
+        }
+        setInputText(transcript);
+        // Use the latest handler so voice input never calls a stale React render closure.
+        void handleSendMessageRef.current(transcript);
       };
 
       recognition.onerror = (event: any) => {
@@ -127,10 +136,19 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح.';
           setNoticeMessage(msg);
           speakText(msg);
-        } else if (errType === 'no-speech') {
-          const msg = 'لم أتمكن من سماعك، تفضل بالضغط والمحاولة ثانية أو كتابة طلبك.';
-          setNoticeMessage(msg);
-          speakText(msg);
+        } else {
+          const messages: Record<string, string> = {
+            'no-speech': 'لم أتمكن من سماعك. قرّب الهاتف وتحدث بوضوح ثم حاول مجدداً.',
+            'audio-capture': 'تعذر تشغيل الميكروفون. تحقق من عدم استخدامه من تطبيق آخر.',
+            'network': 'انقطع اتصال التعرف الصوتي بالشبكة. تحقق من الإنترنت ثم حاول مجدداً.',
+            'language-not-supported': 'هذا المتصفح لا يدعم التعرف باللهجة المختارة. جرّب العربية أو اكتب طلبك.',
+            'aborted': 'تم إيقاف الاستماع.',
+          };
+          const msg = messages[errType] || `تعذر التعرف على الصوت (${errType || 'خطأ غير معروف'}). يمكنك إعادة المحاولة أو الكتابة.`;
+          if (errType !== 'aborted') {
+            setNoticeMessage(msg);
+            speakText(msg);
+          }
         }
       };
 
@@ -169,13 +187,19 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       setIsListening(false);
     } else {
       try {
+        // Unlock Android Chrome audio APIs directly inside the user's tap gesture.
+        unlockAudio();
         // Interruption: instantly silence assistant when user speaks
         stopSpeaking();
         playAudioChime('listen');
         recognitionRef.current.start();
         setIsListening(true);
-      } catch {
+      } catch (error: any) {
         setIsListening(false);
+        const msg = error?.name === 'InvalidStateError'
+          ? 'الميكروفون يعمل بالفعل. انتظر قليلاً ثم حاول مجدداً.'
+          : 'لم أتمكن من بدء الاستماع. تحقق من إذن الميكروفون في المتصفح.';
+        setNoticeMessage(msg);
       }
     }
   };
@@ -301,6 +325,9 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       setIsLoading(false);
     }
   };
+
+  // Keep the recognition callback connected to the latest message handler.
+  handleSendMessageRef.current = handleSendMessage;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in">
