@@ -31,20 +31,39 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   currentWilaya,
   initialQuery,
 }) => {
-  const [messages, setMessages] = useState<AssistantInteraction[]>([
-    {
+  const [messages, setMessages] = useState<AssistantInteraction[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('zalovoice_assistant_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed.slice(-30);
+      }
+    } catch {
+      // Continue with a fresh conversation if session storage is unavailable.
+    }
+    return [{
       id: 'init_1',
       sender: 'assistant',
       text: 'أهلاً بك في ZaLoVoice! أنا مساعدك الصوتي الذكي والشامل. كيف يمكنني مساعدتك؟ (بحث أكاديمي، استئجار أو شراء سكن، طلب طاكسي، تسوق وتجارة، مطاعم، أو حجوزات).',
       speechText: 'أهلاً بك في زالو فويس، أنا في خدمتك لأي طلب صوتي أو كتابي.',
       timestamp: 'الآن',
-    },
-  ]);
+    }];
+  });
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [voiceSpeechEnabled, setVoiceSpeechEnabled] = useState(true);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  // Keep the current assistant conversation across modal closes and page reloads in this tab.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('zalovoice_assistant_history', JSON.stringify(messages.slice(-30)));
+    } catch {
+      // Storage can be unavailable in private or restricted browsing modes.
+    }
+  }, [messages]);
+
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -189,7 +208,16 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: query,
-            context: { currentWilaya },
+            context: {
+              currentWilaya,
+              history: messages
+                .filter((item) => item.sender === 'user' || item.sender === 'assistant')
+                .slice(-16)
+                .map((item) => ({
+                  role: item.sender,
+                  content: item.text,
+                })),
+            },
             language: 'ar',
           }),
         });
@@ -382,7 +410,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                     {isAsst && (
                       <span className="flex items-center gap-1 text-slate-400">
                         <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                        <span>{m.isLiveAi ? 'Gemini 3.8 Flash' : 'NLP محلي'}</span>
+                        <span>{m.isLiveAi ? 'ذكاء اصطناعي مباشر' : 'NLP محلي'}</span>
                       </span>
                     )}
                   </div>

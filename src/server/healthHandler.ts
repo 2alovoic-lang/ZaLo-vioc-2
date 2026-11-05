@@ -1,16 +1,16 @@
 /**
- * Safe Health Diagnostics Handler for ZaLoVoice
- * Shared between Express (server.ts) and Vercel Serverless Function (api/health.ts)
- * Does NOT expose any API keys, tokens, or secret values.
+ * Safe Health Diagnostics Handler for ZaLoVoice.
+ * Reports only whether integrations are configured; never exposes secret values.
  */
 export async function handleHealthCheck(req: any, res: any) {
-  const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0);
+  const isOpenAIConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
+  const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
   const isSupabaseConfigured = Boolean(
-    process.env.VITE_SUPABASE_URL &&
-    process.env.VITE_SUPABASE_ANON_KEY &&
-    process.env.VITE_SUPABASE_URL.trim().length > 0
+    process.env.VITE_SUPABASE_URL?.trim() &&
+    process.env.VITE_SUPABASE_ANON_KEY?.trim() &&
+    process.env.VITE_SUPABASE_URL.includes('supabase.co')
   );
-  const isMapsConfigured = Boolean(process.env.VITE_GOOGLE_MAPS_API_KEY && process.env.VITE_GOOGLE_MAPS_API_KEY.trim().length > 0);
+  const isMapsConfigured = Boolean(process.env.VITE_GOOGLE_MAPS_API_KEY?.trim());
 
   const responsePayload = {
     status: 'online',
@@ -18,20 +18,19 @@ export async function handleHealthCheck(req: any, res: any) {
     targetMarket: 'Global & Algeria (Accessible)',
     platform: process.env.VERCEL ? 'vercel-serverless' : 'express-node',
     integrations: {
+      openai: {
+        configured: isOpenAIConfigured,
+        model: process.env.OPENAI_MODEL || 'gpt-5.5',
+        status: isOpenAIConfigured ? 'configured_not_live_tested' : 'pending_key',
+      },
       geminiAi: {
         configured: isGeminiConfigured,
         model: 'gemini-3.8-flash',
-        status: isGeminiConfigured ? 'ready' : 'pending_key',
-        message: isGeminiConfigured
-          ? 'تم تهيئة مفتاح Gemini بنجاح'
-          : 'في انتظار تعيين GEMINI_API_KEY في إعدادات البيئة (Secrets)',
+        status: isGeminiConfigured ? 'configured' : 'pending_key',
       },
       supabase: {
         configured: isSupabaseConfigured,
-        status: isSupabaseConfigured ? 'ready' : 'pending_configuration',
-        message: isSupabaseConfigured
-          ? 'تم ربط خدمة Supabase'
-          : 'في انتظار إضافة VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY',
+        status: isSupabaseConfigured ? 'configured' : 'pending_configuration',
       },
       maps: {
         configured: isMapsConfigured,
