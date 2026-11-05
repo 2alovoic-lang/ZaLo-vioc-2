@@ -20,6 +20,7 @@ export interface UnifiedAssistantResponse {
     title: string;
     authorOrPublisher: string;
     year: string;
+    url?: string;
   }>;
   isAiLive: boolean;
   provider: 'Gemini' | 'Local Fallback';
@@ -56,7 +57,7 @@ CRITICAL INSTRUCTIONS:
 - Provide a concise, phonetically natural "speechText" specifically optimized for text-to-speech audio narration for blind users.
 - If the intent is "academic", provide citations and key points.
 - If the user asks to open or navigate to a service (e.g. "افتح الرسائل", "اريد شراء عقار", "طلب طاكسي"), set "actionType": "navigate_to_tab" and specify "targetTab".
-- STRICT LOCAL PLACES RULE: Never invent restaurant, shop, clinic, hotel, taxi provider names, addresses, phone numbers, ratings, prices, or opening hours. No live local-business search tool or verified restaurant database is connected to this assistant at present. If asked for local places, state clearly that you cannot verify actual businesses yet; ask for the city/wilaya or open the relevant service without fabricating a list.
+- SEARCH & SOURCES: For requests to find information, current facts, prices, local places, services, or availability, use Google Search grounding when enabled. Cite only sources returned in grounding metadata. Never claim that a business is open, available, verified, or bookable unless the source explicitly confirms it; never invent names, addresses, phone numbers, ratings, prices, or opening hours. Clearly distinguish web listings from live reservation/transaction availability.
 - Respond ONLY with a valid JSON object matching this schema:
 {
   "intent": "academic" | "commerce" | "real_estate" | "taxi" | "food" | "booking" | "more_services" | "chat",
@@ -153,7 +154,8 @@ async function executeGeminiCall(
   ai: GoogleGenAI,
   message: string,
   context: any,
-  timeoutMs: number = 8500
+  timeoutMs: number = 8500,
+  useGoogleSearch: boolean = false
 ): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => {
@@ -168,12 +170,24 @@ async function executeGeminiCall(
         systemInstruction: SYSTEM_PROMPT,
         responseMimeType: 'application/json',
         temperature: 0.7,
+        ...(useGoogleSearch ? { tools: [{ googleSearch: {} }] } : {}),
         abortSignal: controller.signal,
       },
     });
     clearTimeout(timer);
     const rawText = response.text || '';
-    return parseGeminiJsonResponse(rawText);
+    const parsed = parseGeminiJsonResponse(rawText);
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const groundedCitations = chunks
+      .filter((chunk: any) => typeof chunk?.web?.uri === 'string')
+      .map((chunk: any) => ({
+        title: String(chunk.web.title || chunk.web.uri),
+        authorOrPublisher: (() => { try { return new URL(chunk.web.uri).hostname; } catch { return 'Web source'; } })(),
+        year: '',
+        url: chunk.web.uri,
+      }));
+    if (groundedCitations.length) parsed.citations = groundedCitations;
+    return parsed;
   } catch (err: any) {
     clearTimeout(timer);
     if (err.name === 'AbortError' || controller.signal.aborted) {
@@ -235,6 +249,7 @@ export async function handleAssistantRequest(req: any, res: any) {
     }
 
     const trimmedMessage = message.trim();
+    const useGoogleSearch = /ابحث|بحث|دور|وين|أين|أفضل|مطاعم|مطعم|سعر|أسعار|ثمن|تقييم|متاح|مفتوح|آخر|اليوم|الآن|قريب|شراء|كراء|عقار|شقة|طاكسي|فندق|حجز|search|find|near|best|price|latest|today|open|available|restaurant|hotel|taxi|real estate|rent|buy/i.test(trimmedMessage);
     const currentWilaya = context?.currentWilaya || 'الجزائر العاصمة';
 
     // 1. Safe API Key validation (Strictly server-side, never logged)
@@ -272,7 +287,7 @@ export async function handleAssistantRequest(req: any, res: any) {
       try {
         // Individual call timeout: 7000ms on first, 5000ms on retries
         const callTimeout = attempt === 0 ? 7000 : 5000;
-        const geminiResult = await executeGeminiCall(ai, trimmedMessage, context, callTimeout);
+        const geminiResult = await executeGeminiCall(ai, trimmedMessage, context, callTimeout, useGoogleSearch);
 
         // Validate structure from Gemini
         if (geminiResult && typeof geminiResult === 'object' && geminiResult.reply) {
