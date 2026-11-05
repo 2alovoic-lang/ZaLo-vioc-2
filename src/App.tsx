@@ -35,34 +35,34 @@ import {
 } from './types/algeria';
 
 // Existing Chat & Social Components
-import { Sidebar } from './components/Sidebar';
-import { ChatArea } from './components/ChatArea';
-import { ChatInfoPanel } from './components/ChatInfoPanel';
-import { MomentsView } from './components/MomentsView';
-import { CloudView } from './components/CloudView';
-import { ContactsView } from './components/ContactsView';
-import { CallModal } from './components/CallModal';
-import { PollModal } from './components/PollModal';
-import { CreateGroupModal } from './components/CreateGroupModal';
-import { AddFriendModal } from './components/AddFriendModal';
-import { SettingsModal } from './components/SettingsModal';
-import { ImageViewerModal } from './components/ImageViewerModal';
-import { PinLockScreen } from './components/PinLockScreen';
+const Sidebar = React.lazy(() => import('./components/Sidebar').then((module) => ({ default: module.Sidebar })));
+const ChatArea = React.lazy(() => import('./components/ChatArea').then((module) => ({ default: module.ChatArea })));
+const ChatInfoPanel = React.lazy(() => import('./components/ChatInfoPanel').then((module) => ({ default: module.ChatInfoPanel })));
+const MomentsView = React.lazy(() => import('./components/MomentsView').then((module) => ({ default: module.MomentsView })));
+const CloudView = React.lazy(() => import('./components/CloudView').then((module) => ({ default: module.CloudView })));
+const ContactsView = React.lazy(() => import('./components/ContactsView').then((module) => ({ default: module.ContactsView })));
+const CallModal = React.lazy(() => import('./components/CallModal').then((module) => ({ default: module.CallModal })));
+const PollModal = React.lazy(() => import('./components/PollModal').then((module) => ({ default: module.PollModal })));
+const CreateGroupModal = React.lazy(() => import('./components/CreateGroupModal').then((module) => ({ default: module.CreateGroupModal })));
+const AddFriendModal = React.lazy(() => import('./components/AddFriendModal').then((module) => ({ default: module.AddFriendModal })));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal })));
+const ImageViewerModal = React.lazy(() => import('./components/ImageViewerModal').then((module) => ({ default: module.ImageViewerModal })));
+const PinLockScreen = React.lazy(() => import('./components/PinLockScreen').then((module) => ({ default: module.PinLockScreen })));
 
 // ZaLoVoice Mobile Super-App Components
 import { AndroidFrame } from './components/AndroidFrame';
 import { HomeVoiceView } from './components/HomeVoiceView';
-import { AcademicSection } from './components/AcademicSection';
-import { AccessibilityModal } from './components/AccessibilityModal';
-import { MenuDrawer } from './components/MenuDrawer';
-import { VoiceAssistantModal } from './components/VoiceAssistantModal';
-import { CommerceSection } from './components/CommerceSection';
-import { RealEstateSection } from './components/RealEstateSection';
-import { TaxiSection } from './components/TaxiSection';
-import { RestaurantsSection } from './components/RestaurantsSection';
-import { BookingsSection } from './components/BookingsSection';
-import { IntegrationStatusModal } from './components/IntegrationStatusModal';
-import { MoreServicesSection } from './components/MoreServicesSection';
+const AcademicSection = React.lazy(() => import('./components/AcademicSection').then((module) => ({ default: module.AcademicSection })));
+const AccessibilityModal = React.lazy(() => import('./components/AccessibilityModal').then((module) => ({ default: module.AccessibilityModal })));
+const MenuDrawer = React.lazy(() => import('./components/MenuDrawer').then((module) => ({ default: module.MenuDrawer })));
+const VoiceAssistantModal = React.lazy(() => import('./components/VoiceAssistantModal').then((module) => ({ default: module.VoiceAssistantModal })));
+const CommerceSection = React.lazy(() => import('./components/CommerceSection').then((module) => ({ default: module.CommerceSection })));
+const RealEstateSection = React.lazy(() => import('./components/RealEstateSection').then((module) => ({ default: module.RealEstateSection })));
+const TaxiSection = React.lazy(() => import('./components/TaxiSection').then((module) => ({ default: module.TaxiSection })));
+const RestaurantsSection = React.lazy(() => import('./components/RestaurantsSection').then((module) => ({ default: module.RestaurantsSection })));
+const BookingsSection = React.lazy(() => import('./components/BookingsSection').then((module) => ({ default: module.BookingsSection })));
+const IntegrationStatusModal = React.lazy(() => import('./components/IntegrationStatusModal').then((module) => ({ default: module.IntegrationStatusModal })));
+const MoreServicesSection = React.lazy(() => import('./components/MoreServicesSection').then((module) => ({ default: module.MoreServicesSection })));
 import { speakWithFullVoice, stopSpeaking, unlockAudio } from './utils/speechManager';
 
 // Icons
