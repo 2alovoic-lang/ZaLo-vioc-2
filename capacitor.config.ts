@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.zalovoice.app',
   appName: 'ZaLoVoice',
   webDir: 'dist',
-  bundledWebRuntime: false,
   android: {
     allowMixedContent: false,
   },
