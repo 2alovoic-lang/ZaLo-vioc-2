@@ -272,43 +272,6 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
       <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full bg-[#0055aa]/20 blur-[90px] pointer-events-none" />
 
       {/* ============================================================== */}
-      {/* 1. TOP BAR (Matching Mockup: Logo in Center, Menu Button on Right) */}
-      {/* ============================================================== */}
-      <header className="px-5 pt-4 pb-2 flex items-center justify-between z-20">
-        {/* Left balance spacer */}
-        <div className="w-11" />
-
-        {/* ZALO wordmark: metallic 3D letters in the approved blue, cyan and gold palette */}
-        <div
-          className="select-none cursor-default"
-          aria-label="ZALO"
-        >
-          <span
-            className="text-[27px] font-black italic tracking-[0.08em] font-sans"
-            style={{
-              background: 'linear-gradient(180deg, #ffffff 0%, #dcecff 28%, #f7cf63 52%, #ffffff 72%, #83cfff 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
-              WebkitTextStroke: '0.35px rgba(255,255,255,0.65)',
-              filter: 'drop-shadow(0 2px 0 #073b82) drop-shadow(0 0 10px rgba(0,190,255,0.5))',
-            }}
-          >
-            ZALO
-          </span>
-        </div>
-
-        {/* Circular Hamburger Menu Button on Top Right (Exact match from mockup) */}
-        <button
-          onClick={onOpenMenuDrawer}
-          aria-label="القائمة الجانبية والخدمات"
-          className="w-11 h-11 rounded-full bg-[#071828]/90 border border-cyan-500/35 flex items-center justify-center text-cyan-200 hover:text-white hover:border-cyan-400 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_15px_rgba(0,180,255,0.25)]"
-        >
-          <Menu className="w-5 h-5 stroke-[2.2]" />
-        </button>
-      </header>
-
-      {/* ============================================================== */}
       {/* 2. CENTERPIECE — THE FUTURISTIC VOICE ORB & SOUNDWAVE FREQUENCIES */}
       {/* ============================================================== */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-2 my-auto">
@@ -476,96 +439,7 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
           </div>
         )}
 
-        {/* Quick Voice Play Test & Silent Input Access */}
-        {voiceState === 'idle' && (
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              onClick={() => speakTextAloud('أهلاً بك في زالو فويس، أنا أستمع إليك وجاهز لخدمتك')}
-              className="flex items-center gap-1 text-[11px] text-cyan-400/70 hover:text-cyan-200 transition-colors cursor-pointer py-1 px-2.5 rounded-full bg-[#041424]/60 border border-cyan-500/20"
-              title="سماع تجربة الصوت"
-            >
-              <Volume2 className="w-3 h-3 text-cyan-400" />
-              <span>تجربة الصوت العربي</span>
-            </button>
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-[11px] text-cyan-400/70 hover:text-cyan-200 transition-colors cursor-pointer py-1 px-2.5 rounded-full bg-[#041424]/60 border border-cyan-500/20"
-            >
-              كتابة
-            </button>
-          </div>
-        )}
 
-        {/* Optional Hidden/Expandable Text Input for Users who Prefer Typing */}
-        {showTextInput && voiceState === 'idle' && (
-          <form
-            onSubmit={handleSubmitText}
-            className="mt-3 flex items-center bg-[#071d2b]/95 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-xl w-full max-w-xs animate-fade-in"
-          >
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="اكتب طلبك..."
-              aria-label="اكتب طلبك إلى مساعد ZaLoVoice"
-              className="flex-1 text-xs bg-transparent border-none focus:outline-none text-white placeholder-cyan-300/40 px-2"
-              autoFocus
-            />
-            <button
-              type="submit"
-              aria-label="إرسال الطلب"
-              disabled={!inputText.trim()}
-              className="w-7 h-7 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center font-bold"
-            >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
-        )}
-      </div>
-
-      {/* ============================================================== */}
-      {/* 3. AMBIENT FLOWING LIGHT RIBBONS IN LOWER BACKGROUND */}
-      {/* ============================================================== */}
-      <div className="absolute bottom-16 inset-x-0 h-44 pointer-events-none overflow-hidden z-0 opacity-60">
-        <svg className="w-full h-full animate-ribbon-drift" viewBox="0 0 400 180" preserveAspectRatio="none" fill="none">
-          {/* Cyan Light Wave Line 1 */}
-          <path
-            d="M-20,160 C80,60 220,180 420,40"
-            stroke="url(#waveGlow1)"
-            strokeWidth="2.5"
-            opacity="0.8"
-          />
-          {/* Cyan Light Wave Line 2 */}
-          <path
-            d="M-20,120 C120,170 260,30 420,140"
-            stroke="url(#waveGlow2)"
-            strokeWidth="1.5"
-            opacity="0.6"
-          />
-          {/* Soft Diffused Ambient Fill */}
-          <path
-            d="M-20,160 C80,60 220,180 420,40 L420,180 L-20,180 Z"
-            fill="url(#ambientGlow)"
-            opacity="0.12"
-          />
-          <defs>
-            <linearGradient id="waveGlow1" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00b0ff" stopOpacity="0.2" />
-              <stop offset="40%" stopColor="#00e5ff" stopOpacity="0.9" />
-              <stop offset="70%" stopColor="#29b6f6" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#0284c7" stopOpacity="0.2" />
-            </linearGradient>
-            <linearGradient id="waveGlow2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#0284c7" stopOpacity="0.1" />
-              <stop offset="50%" stopColor="#00e5ff" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#0099ff" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="ambientGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#00e5ff" />
-              <stop offset="100%" stopColor="#002244" />
-            </linearGradient>
-          </defs>
-        </svg>
       </div>
 
       {/* Conversational Assistant Card (If spoken answer displayed) */}
