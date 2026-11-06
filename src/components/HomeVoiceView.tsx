@@ -11,6 +11,7 @@ import {
 import { AccessibilitySettings } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
 import { speakWithFullVoice, stopSpeaking, unlockAudio, playAudioChime } from '../utils/speechManager';
+import { isNativeSpeechAvailable, listenNativeOnce, stopNativeSpeech } from '../utils/nativeSpeech';
 
 interface HomeVoiceViewProps {
   onNavigateToService: (
@@ -47,69 +48,80 @@ export const HomeVoiceView: React.FC<HomeVoiceViewProps> = ({
   const recognitionRef = useRef<any>(null);
   const processingTimerRef = useRef<any>(null);
 
-  // Initialize Speech Recognition cleanly
+  // Use Android's native SpeechRecognizer in the installed app; retain browser fallback on web.
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const locale =
+      currentLanguage === 'dz' || currentLanguage === 'ar'
+        ? 'ar-DZ'
+        : currentLanguage === 'fr'
+        ? 'fr-FR'
+        : 'en-US';
 
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang =
-        currentLanguage === 'dz' || currentLanguage === 'ar'
-          ? 'ar-DZ'
-          : currentLanguage === 'fr'
-          ? 'fr-FR'
-          : 'en-US';
-
-      recognition.onstart = () => {
-        setVoiceState('listening');
+    if (isNativeSpeechAvailable()) {
+      recognitionRef.current = {
+        start: async () => {
+          setVoiceState('listening');
+          try {
+            const transcript = await listenNativeOnce(locale);
+            if (transcript) {
+              setTranscribedText(transcript);
+              await handleSpeechRecognized(transcript);
+            } else {
+              setAssistantMessage('لم يصلني كلام واضح. حاول مرة أخرى.');
+            }
+          } catch (error: any) {
+            const message = error?.message === 'MICROPHONE_PERMISSION_DENIED'
+              ? 'يرجى السماح باستخدام الميكروفون لمتابعة التحدث.'
+              : 'تعذر تشغيل التعرف الصوتي على هذا الجهاز. يمكنك المحاولة مجدداً.';
+            setAssistantMessage(message);
+            setShowTextInput(true);
+          } finally {
+            setVoiceState('idle');
+          }
+        },
+        stop: () => { void stopNativeSpeech(); },
       };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setTranscribedText(transcript);
-        handleSpeechRecognized(transcript);
+      return () => {
+        void stopNativeSpeech();
+        recognitionRef.current = null;
       };
-
-      recognition.onerror = (event: any) => {
-        setVoiceState('idle');
-        const errType = event?.error;
-        console.warn('Speech recognition error:', errType);
-        if (errType === 'not-allowed') {
-          const msg = 'يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح، أو يمكنك كتابة طلبك.';
-          setAssistantMessage(msg);
-          setShowTextInput(true);
-          playAudioChime('alert');
-          speakTextAloud(msg);
-        } else if (errType === 'no-speech') {
-          const msg = 'لم أتمكن من سماعك، تفضل بالضغط والتحدث مجدداً أو كتابة طلبك.';
-          setAssistantMessage(msg);
-          playAudioChime('alert');
-          speakTextAloud(msg);
-        } else if (errType === 'network') {
-          const msg = 'تعذر الاتصال بخدمة التعرف الصوتي. يمكنك كتابة طلبك في الحقل أدناه.';
-          setAssistantMessage(msg);
-          setShowTextInput(true);
-          playAudioChime('alert');
-          speakTextAloud(msg);
-        }
-      };
-
-      recognition.onend = () => {
-        setVoiceState((prev) => (prev === 'listening' ? 'idle' : prev));
-      };
-
-      recognitionRef.current = recognition;
     }
 
-    return () => {
-      if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
-      // NOTE: We do not call stopSpeaking() here so that speech output
-      // continues uninterrupted when navigating to another tab/service!
+    const BrowserSpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!BrowserSpeechRecognition) {
+      recognitionRef.current = null;
+      return;
+    }
+
+    const recognition = new BrowserSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = locale;
+    recognition.onstart = () => setVoiceState('listening');
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setTranscribedText(transcript);
+        void handleSpeechRecognized(transcript);
+      }
     };
-  }, [currentLanguage]);
+    recognition.onerror = (event: any) => {
+      setVoiceState('idle');
+      const msg = event?.error === 'not-allowed'
+        ? 'يرجى السماح بالوصول إلى الميكروفون، أو كتابة طلبك.'
+        : 'تعذر التعرف على كلامك. حاول مجدداً أو اكتب طلبك.';
+      setAssistantMessage(msg);
+      setShowTextInput(true);
+    };
+    recognition.onend = () => setVoiceState((prev) => prev === 'listening' ? 'idle' : prev);
+    recognitionRef.current = recognition;
+
+    return () => {
+      try { recognition.stop(); } catch { /* already stopped */ }
+      recognitionRef.current = null;
+    };
+  }, [currentLanguage]); 
 
   const startListeningFlow = () => {
     unlockAudio();
