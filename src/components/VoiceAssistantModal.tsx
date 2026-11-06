@@ -227,7 +227,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 
       // 1. Attempt server-side API call if running in fullstack dev/server mode
       try {
-        const response = await fetch('/api/assistant', {
+        const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\\/$/, '');
+        const response = await fetch(`${apiBaseUrl}/api/assistant`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
