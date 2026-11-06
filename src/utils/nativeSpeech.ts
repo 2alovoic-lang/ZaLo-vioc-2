@@ -14,8 +14,23 @@ export async function listenNativeOnce(language: string): Promise<string> {
     throw new Error('NATIVE_SPEECH_UNAVAILABLE');
   }
 
+  let selectedLanguage = language;
+  try {
+    const supported = await SpeechRecognition.getSupportedLanguages();
+    const languages = supported.languages || [];
+    if (languages.length && !languages.includes(language)) {
+      if (language.startsWith('ar')) {
+        selectedLanguage = languages.find((item) => item.toLowerCase().startsWith('ar-')) || language;
+      } else {
+        selectedLanguage = languages.find((item) => item.toLowerCase().startsWith(language.slice(0, 2).toLowerCase())) || language;
+      }
+    }
+  } catch {
+    // The native service may not expose its locale list; try the requested BCP-47 locale.
+  }
+
   const result = await SpeechRecognition.start({
-    language,
+    language: selectedLanguage,
     maxResults: 1,
     partialResults: false,
     popup: false,
