@@ -15,6 +15,7 @@ import {
 import { AssistantInteraction } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
 import { speakWithFullVoice, stopSpeaking, playAudioChime, unlockAudio } from '../utils/speechManager';
+import { isNativeSpeechAvailable, listenNativeOnce, stopNativeSpeech } from '../utils/nativeSpeech';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -103,7 +104,70 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     }
   }, [isOpen, initialQuery]);
 
-  // Initialize Web Speech API for voice recognition
+  // Native Android SpeechRecognizer for installed builds; browser API remains the web fallback.
+  useEffect(() => {
+    if (isNativeSpeechAvailable()) {
+      recognitionRef.current = {
+        start: async () => {
+          setIsListening(true);
+          try {
+            const transcript = await listenNativeOnce('ar-DZ');
+            setIsListening(false);
+            if (transcript) {
+              setInputText(transcript);
+              void handleSendMessageRef.current(transcript);
+            } else {
+              setNoticeMessage('لم يصلني نص واضح من الميكروفون. حاول مرة أخرى أو اكتب طلبك.');
+            }
+          } catch (error: any) {
+            setIsListening(false);
+            const msg = error?.message === 'MICROPHONE_PERMISSION_DENIED'
+              ? 'يرجى السماح بالوصول إلى الميكروفون من إعدادات الهاتف.'
+              : 'تعذر تشغيل التعرف الصوتي على هذا الجهاز. يمكنك كتابة رسالتك.';
+            setNoticeMessage(msg);
+          }
+        },
+        stop: () => { void stopNativeSpeech(); },
+      };
+      return () => {
+        void stopNativeSpeech();
+        recognitionRef.current = null;
+      };
+    }
+
+    const BrowserSpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!BrowserSpeechRecognition) {
+      recognitionRef.current = null;
+      return;
+    }
+
+    const recognition = new BrowserSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'ar-DZ';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const resultIndex = typeof event.resultIndex === 'number' ? event.resultIndex : 0;
+      const transcript = event.results?.[resultIndex]?.[0]?.transcript?.trim();
+      setIsListening(false);
+      if (transcript) {
+        setInputText(transcript);
+        void handleSendMessageRef.current(transcript);
+      }
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      setNoticeMessage('تعذر التعرف على كلامك. حاول مجدداً أو اكتب رسالتك.');
+    };
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    return () => {
+      try { recognition.stop(); } catch { /* already stopped */ }
+      recognitionRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
