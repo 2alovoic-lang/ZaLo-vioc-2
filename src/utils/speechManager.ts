@@ -8,9 +8,6 @@
  * 5. Garbage Collection and Chrome 14-second cutoff prevention
  */
 
-import { Capacitor } from '@capacitor/core';
-import { TextToSpeech } from '@capacitor-community/text-to-speech';
-
 let activeUtterance: SpeechSynthesisUtterance | null = null;
 let keepAliveTimer: number | null = null;
 let cachedArabicVoice: SpeechSynthesisVoice | null = null;
@@ -206,45 +203,10 @@ export const speakWithFullVoice = async (
     onError?: (err?: any) => void;
   }
 ) => {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
   const cleanText = prepareClearArabicText(text);
   if (!cleanText) return;
-
-  // Installed Capacitor builds use Android's native TextToSpeech service.
-  // The browser SpeechSynthesis engine remains the fallback for web builds.
-  if (Capacitor.isNativePlatform()) {
-    try {
-      if (keepAliveTimer) {
-        clearInterval(keepAliveTimer);
-        keepAliveTimer = null;
-      }
-      await TextToSpeech.stop();
-      const requestedLang = options?.lang || 'ar';
-      const lang = requestedLang.startsWith('ar')
-        ? 'ar-SA'
-        : requestedLang.startsWith('fr')
-          ? 'fr-FR'
-          : 'en-US';
-      const availability = await TextToSpeech.isLanguageSupported({ lang });
-      const resolvedLang = availability.supported
-        ? lang
-        : requestedLang.startsWith('ar') ? 'ar' : requestedLang.startsWith('fr') ? 'fr' : 'en-US';
-      await TextToSpeech.speak({
-        text: cleanText,
-        lang: resolvedLang,
-        rate: options?.rate !== undefined ? options.rate : 0.92,
-        pitch: options?.pitch !== undefined ? options.pitch : 1.0,
-        volume: 1.0,
-        queueStrategy: 0,
-      });
-      options?.onEnd?.();
-      return;
-    } catch (nativeError) {
-      console.warn('ZaLoVoice native TTS failed; trying browser speech:', nativeError);
-      options?.onError?.(nativeError);
-    }
-  }
-
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
   try {
     // Stop any ongoing speech and flush Chromium audio queue cleanly
@@ -320,9 +282,6 @@ export const speakWithFullVoice = async (
 };
 
 export const stopSpeaking = () => {
-  if (Capacitor.isNativePlatform()) {
-    void TextToSpeech.stop().catch((err) => console.warn('ZaLoVoice native TTS stop failed:', err));
-  }
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   try {
     if (keepAliveTimer) {
