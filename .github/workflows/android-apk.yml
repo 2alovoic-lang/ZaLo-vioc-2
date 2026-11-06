@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-apk:
-    name: Build Android debug APK
+    name: Build and inspect Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -42,11 +42,33 @@ jobs:
       - name: Sync web assets into Android
         run: npx cap sync android
 
+      - name: Report Android compatibility settings
+        run: |
+          echo "=== Capacitor Android Gradle configuration ==="
+          grep -R -n -E 'minSdkVersion|targetSdkVersion|applicationId|versionCode' android/app/build.gradle android/variables.gradle || true
+          echo "=== Android manifest permissions ==="
+          grep -o 'android.permission.[A-Z_]*' android/app/src/main/AndroidManifest.xml | sort -u || true
+
       - name: Build debug APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+
+      - name: Inspect APK package, signing and CPU support
+        run: |
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -f "$APK"
+          echo "=== APK package metadata ==="
+          "$AAPT" dump badging "$APK" | head -n 8
+          echo "=== APK signature verification ==="
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          echo "=== Native CPU libraries included (if any) ==="
+          unzip -l "$APK" | grep -E 'lib/(arm64-v8a|armeabi-v7a|x86|x86_64)/' || true
+          echo "=== APK size ==="
+          du -h "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
