@@ -331,7 +331,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           setMessages(prev => [...prev, {
             id: `company_${Date.now()}`, sender: 'assistant', text: companyReply,
             speechText: companyReply, timestamp: new Date().toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'}),
-            intent: 'عمليات الشركة', isLiveAi: true,
+            isLiveAi: true,
           }]);
           if (voiceSpeechEnabled) speakText(companyReply);
         } catch (companyError: any) {
@@ -340,7 +340,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             id: `company_error_${Date.now()}`, sender: 'assistant',
             text: safeMessage, speechText: safeMessage,
             timestamp: new Date().toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'}),
-            intent: 'تعذر تنفيذ أمر الشركة', isLiveAi: false,
+            isLiveAi: false,
           }]);
           if (voiceSpeechEnabled) speakText(safeMessage);
         }
