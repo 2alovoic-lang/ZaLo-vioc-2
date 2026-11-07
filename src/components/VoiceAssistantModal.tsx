@@ -16,6 +16,7 @@ import { AssistantInteraction } from '../types/algeria';
 import { processLocalNLP } from '../utils/localAssistantNLP';
 import { speakWithFullVoice, stopSpeaking, playAudioChime, unlockAudio } from '../utils/speechManager';
 import { isNativeSpeechAvailable, listenNativeOnce, stopNativeSpeech } from '../utils/nativeSpeech';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -287,6 +288,65 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setIsLoading(true);
 
     try {
+      // Company commands are isolated from public search/service requests.
+      const isCompanyCommand = /(?:الشركة|مقر الشركة|شركة زالو|شركة زالو فويس|زين|الفريق الافتراضي|الموظفين|مهام الشركة)/i.test(query);
+      if (isCompanyCommand) {
+        try {
+          if (!isSupabaseConfigured || !supabase) throw new Error('اتصال قاعدة البيانات غير مهيأ في هذه النسخة.');
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          if (authError) throw authError;
+          const authUser = authData.user;
+          if (!authUser) throw new Error('يلزم تسجيل الدخول بحساب مالك الشركة لتنفيذ هذا الأمر.');
+          const { data: memberships, error: membershipError } = await supabase
+            .from('company_members').select('company_id,role').eq('user_id', authUser.id);
+          if (membershipError) throw membershipError;
+          const membership = memberships?.find((m: any) => ['owner','admin'].includes(m.role));
+          if (!membership) throw new Error('هذا الأمر خاص بمالك الشركة أو المدير المخوّل.');
+          const { data: company, error: companyError } = await supabase
+            .from('companies').select('id,name').eq('id', membership.company_id).single();
+          if (companyError) throw companyError;
+          const { data: manager, error: managerError } = await supabase
+            .from('company_employees').select('id,display_name,activation_status')
+            .eq('company_id', company.id).eq('agent_key','zein').maybeSingle();
+          if (managerError) throw managerError;
+          if (!manager || manager.activation_status !== 'active') throw new Error('زين غير مفعّل حالياً؛ لم يُرسل الأمر.');
+          const { data: run, error: insertError } = await supabase
+            .from('company_agent_runs')
+            .insert({ company_id: company.id, employee_id: manager.id, requested_by: authUser.id,
+              input: { instruction: query, requested_agent: 'zein', source: 'voice_assistant' }, status: 'queued' })
+            .select('id').single();
+          if (insertError) throw insertError;
+          const { data: result, error: invokeError } = await supabase.functions.invoke(
+            'company-agent-orchestrator', { body: { run_id: run.id } }
+          );
+          if (invokeError) throw invokeError;
+          if (result?.error) throw new Error(result.error);
+          const { data: savedRun, error: readError } = await supabase
+            .from('company_agent_runs').select('status,output,error').eq('id',run.id).single();
+          if (readError) throw readError;
+          if (savedRun.status !== 'succeeded') throw new Error(savedRun.error || 'لم يؤكد محرك زين اكتمال الطلب.');
+          const outputText = typeof savedRun.output === 'string' ? savedRun.output :
+            (savedRun.output?.summary || savedRun.output?.report || JSON.stringify(savedRun.output));
+          const companyReply = outputText || 'اكتمل تشغيل زين، لكن لم يُرجع تقريراً نصياً.';
+          setMessages(prev => [...prev, {
+            id: `company_${Date.now()}`, sender: 'assistant', text: companyReply,
+            speechText: companyReply, timestamp: new Date().toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'}),
+            intent: 'عمليات الشركة', isLiveAi: true,
+          }]);
+          if (voiceSpeechEnabled) speakText(companyReply);
+        } catch (companyError: any) {
+          const safeMessage = companyError?.message || 'تعذر تنفيذ أمر الشركة. لم يتم تأكيد أي تنفيذ.';
+          setMessages(prev => [...prev, {
+            id: `company_error_${Date.now()}`, sender: 'assistant',
+            text: safeMessage, speechText: safeMessage,
+            timestamp: new Date().toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'}),
+            intent: 'تعذر تنفيذ أمر الشركة', isLiveAi: false,
+          }]);
+          if (voiceSpeechEnabled) speakText(safeMessage);
+        }
+        return;
+      }
+
       let data: any = null;
 
       // 1. Attempt server-side API call if running in fullstack dev/server mode
