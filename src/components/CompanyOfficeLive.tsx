@@ -16,7 +16,7 @@ export default function CompanyOfficeLive(){
   const {data:{user:u},error:ue}=await supabase.auth.getUser();if(ue)throw ue;setUser(u);
   if(!u){setCompany(null);return;}
   const {data:members,error:me}=await supabase.from('company_members').select('company_id,role').eq('user_id',u.id);if(me)throw me;
-  const membership=members?.find(m=>['owner','admin'].includes(m.role))||members?.[0];if(!membership)throw new Error('هذا الحساب ليس عضواً في الشركة.');
+  const membership=members?.find(m=>['owner','admin'].includes(m.role));if(!membership)throw new Error('هذا الحساب لا يملك صلاحية مالك أو مدير الشركة.');
   const {data:c,error:ce}=await supabase.from('companies').select('id,name,owner_display_name').eq('id',membership.company_id).single();if(ce)throw ce;setCompany(c);
   const [e,t,r,a]=await Promise.all([
    supabase.from('company_employees').select('id,display_name,job_title,department,agent_key,activation_status').eq('company_id',c.id).order('created_at'),
@@ -32,10 +32,25 @@ export default function CompanyOfficeLive(){
   const {error:e}=await supabase.from('company_tasks').insert({company_id:company.id,title:title.trim(),assigned_employee_id:assignee||null,created_by:user.id,priority:'normal'});
   if(e)setError(e.message);else{setTitle('');setAssignee('');setNotice('حُفظت المهمة في سجل الشركة.');await refresh();}setBusy(false);
  };
- const sendToManager=async()=>{if(!supabase||!company||!user||!instruction.trim())return;setBusy(true);setError('');
-  const manager=employees.find(e=>e.agent_key==='zein');
-  const {error:e}=await supabase.from('company_agent_runs').insert({company_id:company.id,employee_id:manager?.id||null,requested_by:user.id,input:{instruction:instruction.trim(),requested_agent:'zein'},status:'queued'});
-  if(e)setError(e.message);else{setInstruction('');await refresh();const {data:runRows,error:runFetchError}=await supabase.from('company_agent_runs').select('id').eq('company_id',company.id).eq('requested_by',user.id).order('created_at',{ascending:false}).limit(1);if(runFetchError||!runRows?.[0])setError(runFetchError?.message||'تعذر العثور على الطلب');else{const {data:result,error:invokeError}=await supabase.functions.invoke('company-agent-orchestrator',{body:{run_id:runRows[0].id}});if(invokeError)setError(invokeError.message);else if(result?.error)setNotice(result.error);else setNotice('أكمل زين معالجة الطلب وسُجل الناتج.');await refresh();}}setBusy(false);
+ const sendToManager=async()=>{
+  if(!supabase||!company||!user||!instruction.trim()||busy)return;
+  setBusy(true);setError('');setNotice('');
+  try{
+   const {data:membership,error:membershipError}=await supabase.from('company_members').select('role').eq('company_id',company.id).eq('user_id',user.id).maybeSingle();
+   if(membershipError)throw membershipError;
+   if(!membership||!['owner','admin'].includes(membership.role))throw new Error('تنفيذ أوامر الشركة متاح للمالك أو المدير المخوّل فقط.');
+   const manager=employees.find(e=>e.agent_key==='zein'&&e.activation_status==='active');
+   if(!manager)throw new Error('زين غير مفعّل حالياً؛ لم يُنشأ طلب تشغيل.');
+   const {data:run,error:insertError}=await supabase.from('company_agent_runs').insert({company_id:company.id,employee_id:manager.id,requested_by:user.id,input:{instruction:instruction.trim(),requested_agent:'zein'},status:'queued'}).select('id').single();
+   if(insertError)throw insertError;
+   setInstruction('');
+   const {data:result,error:invokeError}=await supabase.functions.invoke('company-agent-orchestrator',{body:{run_id:run.id}});
+   if(invokeError)throw invokeError;
+   if(result?.error)throw new Error(result.error);
+   setNotice('تم إرسال الطلب إلى زين. جارٍ تحديث سجل التنفيذ.');
+   await refresh();
+  }catch(e:any){setError(e?.message||'تعذر إرسال الطلب إلى زين. لم يتم تأكيد التنفيذ.');}
+  finally{setBusy(false);}
  };
  const changeTask=async(t:Task)=>{if(!supabase)return;const next=t.status==='pending'?'in_progress':t.status==='in_progress'?'completed':'pending';
   const {error:e}=await supabase.from('company_tasks').update({status:next,updated_at:new Date().toISOString()}).eq('id',t.id);if(e)setError(e.message);else await refresh();
