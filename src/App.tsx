@@ -63,6 +63,7 @@ const RestaurantsSection = React.lazy(() => import('./components/RestaurantsSect
 const BookingsSection = React.lazy(() => import('./components/BookingsSection').then((module) => ({ default: module.BookingsSection })));
 const IntegrationStatusModal = React.lazy(() => import('./components/IntegrationStatusModal').then((module) => ({ default: module.IntegrationStatusModal })));
 const MoreServicesSection = React.lazy(() => import('./components/MoreServicesSection').then((module) => ({ default: module.MoreServicesSection })));
+const CompanyOfficeLive = React.lazy(() => import('./components/CompanyOfficeLive'));
 import { speakWithFullVoice, stopSpeaking, unlockAudio } from './utils/speechManager';
 
 // Icons
@@ -85,6 +86,7 @@ import {
   MessageCircle,
   LayoutGrid,
   MessageSquareMore,
+  Building2,
 } from 'lucide-react';
 
 export default function App() {
@@ -108,7 +110,7 @@ export default function App() {
 
   // Active Main View / Service
   const [currentServiceTab, setCurrentServiceTab] = useState<
-    'home' | 'academic' | 'commerce' | 'real_estate' | 'taxi' | 'food' | 'bookings' | 'chat' | 'more_services'
+    'home' | 'academic' | 'commerce' | 'real_estate' | 'taxi' | 'food' | 'bookings' | 'chat' | 'more_services' | 'company'
   >('home');
 
   // Bottom Navigation Active Indicator
@@ -665,6 +667,9 @@ export default function App() {
             </div>
           )}
 
+          {/* Private company headquarters: access is enforced by the company component and Supabase RLS. */}
+          {currentServiceTab === 'company' && <div className="flex-1 overflow-y-auto bg-[#071321]"><CompanyOfficeLive /></div>}
+
           {/* 9. More Modular Services Section */}
           {currentServiceTab === 'more_services' && (
             <MoreServicesSection
@@ -824,6 +829,20 @@ export default function App() {
             {bottomNavTab === 'notifications' && (
               <span className="w-5 h-[2px] bg-[#00e5ff] rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
             )}
+          </button>
+
+          {/* 5. مقر الشركة (Owner / authorized members) */}
+          <button
+            onClick={() => {
+              setCurrentServiceTab('company');
+              setBottomNavTab('account');
+              announceToScreenReader('تم فتح مقر شركة ZaLoVoice. يتطلب الدخول حساباً مصرحاً له.');
+            }}
+            className="flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-2xl transition-all cursor-pointer group"
+            aria-label="مقر الشركة"
+          >
+            <Building2 className={`w-6 h-6 transition-all duration-200 ${currentServiceTab === 'company' ? 'text-[#00e5ff] drop-shadow-[0_0_10px_#00e5ff] scale-105 stroke-[2.2]' : 'text-[#7d99b3] group-hover:text-cyan-200 stroke-[1.8]'}`} />
+            <span className={`text-[10px] ${currentServiceTab === 'company' ? 'text-[#00e5ff] font-bold' : 'text-[#7d99b3]'}`}>مقر الشركة</span>
           </button>
 
           {/* 5. الملف (Profile) */}
