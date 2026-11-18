@@ -11,8 +11,10 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Message is required and must be a non-empty string' });
   }
 
-  // Prefer OpenAI when configured. Gemini/local handling remains the safe fallback.
-  if (process.env.OPENAI_API_KEY?.trim()) {
+  // Route explicit discovery/current-information requests through Gemini Google Search grounding.
+  // General conversational requests may use the configured OpenAI provider.
+  const needsGroundedSearch = /ابحث|أبحث|ابحث لي|أبحث لي|نحب نلقى|نحب نعرف|دورلي|قلبلي|شوفلي|بحث|دور|وين|أين|أفضل|مطاعم|مطعم|سعر|أسعار|ثمن|تقييم|متاح|مفتوح|آخر|اليوم|الآن|قريب|شراء|كراء|عقار|شقة|طاكسي|فندق|حجز|search|find|near|best|price|latest|today|open|available|restaurant|hotel|taxi|real estate|rent|buy/i.test(message.trim());
+  if (!needsGroundedSearch && process.env.OPENAI_API_KEY?.trim()) {
     try {
       const result = await generateOpenAIAssistantResponse(message.trim(), context || {});
       res.setHeader('Content-Type', 'application/json');

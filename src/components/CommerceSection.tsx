@@ -29,42 +29,17 @@ export const CommerceSection: React.FC<CommerceSectionProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
-  const [isOrdered, setIsOrdered] = useState(false);
-
-  // Default featured products matching Mockup Screen 7
-  const displayProducts = [
-    {
-      id: 'prod_earbuds',
-      title: 'سماعات لاسلكية',
-      category: 'electronics',
-      priceDzd: 8900,
-      rating: 4.7,
-      image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&auto=format&fit=crop&q=80',
-      wilaya: 'الجزائر العاصمة',
-      inStock: true,
-    },
-    {
-      id: 'prod_shoes',
-      title: 'حذاء رياضي',
-      category: 'fashion',
-      priceDzd: 6500,
-      rating: 4.5,
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop&q=80',
-      wilaya: 'الجزائر العاصمة',
-      inStock: true,
-    },
-    ...products.map((p) => ({
-      id: p.id,
-      title: p.title,
-      category: p.category,
-      priceDzd: p.priceDzd,
-      rating: p.seller.rating || 4.8,
-      image: p.image,
-      wilaya: p.wilaya,
-      inStock: p.inStock,
-    })),
-  ];
+  const displayProducts = products.map((p) => ({
+    id: p.id,
+    title: p.title,
+    category: p.category,
+    priceDzd: p.priceDzd,
+    rating: p.seller.rating,
+    image: p.image,
+    wilaya: p.wilaya,
+    inStock: p.inStock,
+    source: p,
+  }));
 
   const filteredProducts = displayProducts.filter((p) => {
     const matchesCat = activeCategory === 'all' || p.category === activeCategory;
@@ -119,9 +94,8 @@ export const CommerceSection: React.FC<CommerceSectionProps> = ({
         })}
       </div>
 
-      {/* Featured Products Title */}
       <div className="pt-2">
-        <h3 className="text-xs font-black text-cyan-200 block px-1">منتجات مميزة</h3>
+        <h3 className="text-xs font-black text-cyan-200 block px-1">المنتجات المتاحة من مصادر موثوقة</h3>
       </div>
 
       {/* 2-Column Product Grid (Matching Screen 7) */}
@@ -138,10 +112,12 @@ export const CommerceSection: React.FC<CommerceSectionProps> = ({
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] text-amber-300 font-bold">
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                <span>{item.rating}</span>
-              </div>
+              {typeof item.rating === 'number' && (
+                <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] text-amber-300 font-bold">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span>{item.rating}</span>
+                </div>
+              )}
             </div>
 
             <div className="p-3 flex flex-col gap-1.5 flex-1 justify-between">
@@ -153,28 +129,23 @@ export const CommerceSection: React.FC<CommerceSectionProps> = ({
               </div>
 
               <button
-                onClick={() => {
-                  setSelectedProduct(item);
-                  setIsOrdered(true);
-                  setTimeout(() => setIsOrdered(false), 2000);
-                }}
-                className="w-full py-1.5 rounded-xl bg-cyan-500/90 hover:bg-cyan-400 text-slate-950 font-black text-[11px] transition-all cursor-pointer shadow-sm active:scale-95"
+                onClick={() => onContactSeller(item.source)}
+                disabled={!item.inStock}
+                className="w-full py-1.5 rounded-xl bg-cyan-500/90 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-black text-[11px] transition-all cursor-pointer shadow-sm active:scale-95"
               >
-                طلب الشراء
+                {item.inStock ? 'التواصل مع البائع' : 'غير متوفر حالياً'}
               </button>
             </div>
           </div>
         ))}
+        {filteredProducts.length === 0 && (
+          <div className="col-span-2 rounded-2xl border border-cyan-500/20 bg-[#071d2b] p-6 text-center text-sm text-cyan-100/80">
+            لا توجد منتجات موثقة متاحة حالياً. لن نعرض أسعاراً أو تقييمات أو مخزوناً تجريبياً.
+          </div>
+        )}
       </div>
 
-      {/* Success Banner */}
-      {isOrdered && (
-        <div className="p-3 rounded-2xl bg-emerald-950 border border-emerald-500/50 text-emerald-300 text-xs text-center font-bold animate-fade-in">
-          تم إضافة طلبك للتوصيل السريع والدفع عند الاستلام بنجاح!
-        </div>
-      )}
-
-      {/* "المزيد من المنتجات" Button (Screen 7) */}
+      {/* More products filter */}
       <div className="pt-1 pb-4">
         <button
           onClick={() => setActiveCategory('all')}

@@ -128,3 +128,14 @@ body.high-contrast button {
 
 .animate-orbit-pulse { animation: orbit-pulse 3s ease-in-out infinite; }
 .animate-ribbon-drift { animation: ribbon-drift 6s ease-in-out infinite; }
+
+
+/* Respect the in-app reduced-motion accessibility preference. */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

@@ -33,7 +33,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
 }) => {
   const [messages, setMessages] = useState<AssistantInteraction[]>(() => {
     try {
-      const saved = sessionStorage.getItem('zalovoice_assistant_history');
+      const saved = localStorage.getItem('zalovoice_assistant_history');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed.slice(-30);
@@ -44,8 +44,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     return [{
       id: 'init_1',
       sender: 'assistant',
-      text: 'أهلاً بك في ZaLoVoice! أنا مساعدك الصوتي الذكي والشامل. كيف يمكنني مساعدتك؟ (بحث أكاديمي، استئجار أو شراء سكن، طلب طاكسي، تسوق وتجارة، مطاعم، أو حجوزات).',
-      speechText: 'أهلاً بك في زالو فويس، أنا في خدمتك لأي طلب صوتي أو كتابي.',
+      text: 'أهلاً بك في ZaLoVoice. اكتب أو تحدث عن حاجتك، وسأساعدك في البحث والتوجيه. سأوضح لك عندما تكون الخدمة أو النتيجة غير متاحة أو غير متحققة.',
+      speechText: 'أهلاً بك في زالو فويس. تحدث أو اكتب طلبك، وسأساعدك بوضوح وشفافية.',
       timestamp: 'الآن',
     }];
   });
@@ -55,10 +55,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [voiceSpeechEnabled, setVoiceSpeechEnabled] = useState(true);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Keep the current assistant conversation across modal closes and page reloads in this tab.
+  // Keep the assistant conversation on this device across browser sessions.
   useEffect(() => {
     try {
-      sessionStorage.setItem('zalovoice_assistant_history', JSON.stringify(messages.slice(-30)));
+      localStorage.setItem('zalovoice_assistant_history', JSON.stringify(messages.slice(-30)));
     } catch {
       // Storage can be unavailable in private or restricted browsing modes.
     }
@@ -262,7 +262,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       const assistantMsg: AssistantInteraction = {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
-        text: data.reply || 'تمت معالجة طلبك بنجاح.',
+        text: data.reply || 'لم يصل رد صالح من خدمة المساعد. حاول مجدداً.',
         speechText: data.speechText || data.reply,
         timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
         intent: data.intent,
@@ -270,6 +270,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         actionData: {
           wilaya: data.parameters?.wilaya || currentWilaya,
           targetTab: data.targetTab,
+          citations: Array.isArray(data.citations) ? data.citations.slice(0, 8) : [],
         },
       };
 
@@ -304,6 +305,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         actionData: {
           wilaya: currentWilaya,
           targetTab: localFallback.targetTab,
+          citations: localFallback.citations || [],
         },
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -400,6 +402,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
+                  {isAsst && (m.actionData?.citations?.length || 0) > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/50 space-y-1">
+                      <p className="text-[10px] text-cyan-200 font-semibold">المصادر</p>
+                      {m.actionData!.citations!.filter((source) => source.url).map((source, index) => (
+                        <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-sky-300 underline underline-offset-2 break-all">
+                          {source.title || source.url}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {isAsst && typeof m.isLiveAi === 'boolean' && (
+                    <span className={`inline-flex mt-2 rounded-full px-2 py-0.5 text-[10px] border ${m.isLiveAi ? 'border-emerald-500/30 text-emerald-300 bg-emerald-950/40' : 'border-amber-500/30 text-amber-200 bg-amber-950/30'}`}>
+                      {m.isLiveAi ? 'رد من الذكاء الاصطناعي المباشر' : 'رد محلي محدود — لا يتضمن بحثاً حياً'}
+                    </span>
+                  )}
 
                   {/* Intent & Context Action Buttons */}
                   {isAsst && m.actionData?.targetTab && m.actionData.targetTab !== 'assistant' && (

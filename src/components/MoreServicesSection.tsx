@@ -48,18 +48,7 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Persisted notification requests for upcoming services
-  const [notifiedServices, setNotifiedServices] = useState<string[]>(() => {
-    const saved = localStorage.getItem('zalovoice_notified_services');
-    return saved ? JSON.parse(saved) : [];
-  });
 
-  // Modal for confirmation
-  const [alertModalInfo, setAlertModalInfo] = useState<{ title: string; message: string } | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('zalovoice_notified_services', JSON.stringify(notifiedServices));
-  }, [notifiedServices]);
 
   // Helper to map icon names to Lucide icons
   const renderServiceIcon = (iconName: string, category: string) => {
@@ -105,23 +94,7 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
     return matchesCat && matchesStatus && matchesSearch;
   });
 
-  const handleNotifyMe = (service: ModularService) => {
-    if (notifiedServices.includes(service.id)) {
-      setNotifiedServices(notifiedServices.filter((id) => id !== service.id));
-      setAlertModalInfo({
-        title: 'إلغاء التنبيه',
-        message: `تم إلغاء تنبيه خدمة "${service.titleAr}". لن نرسل إشعاراً عند إطلاقها.`,
-      });
-      onSpeakText(`تم إلغاء التنبيه لخدمة ${service.titleAr}`);
-    } else {
-      setNotifiedServices([...notifiedServices, service.id]);
-      setAlertModalInfo({
-        title: 'تم تسجيل اهتمامك بنجاح',
-        message: `سيتم إشعارك فور اكتمال واختبار خدمة "${service.titleAr}" في ولاية ${currentWilaya}. لن يتم تطبيق أي تكاليف أو حجز دون موافقتك الصريحة.`,
-      });
-      onSpeakText(`تم تسجيل اهتمامك بخدمة ${service.titleAr}. سيتم إشعارك فور إطلاقها في ولاية ${currentWilaya}.`);
-    }
-  };
+
 
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#05151e] via-[#071f2b] to-[#040e14] text-slate-100 p-4 space-y-4 select-none" dir="rtl">
@@ -230,7 +203,6 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
             const isActive = service.status === 'active';
             const isInDev = service.status === 'in_development';
             const isPlanned = service.status === 'planned';
-            const isNotified = notifiedServices.includes(service.id);
 
             return (
               <div
@@ -352,17 +324,9 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
                         <ChevronLeft className="w-4 h-4 stroke-[3]" />
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleNotifyMe(service)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                          isNotified
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                            : 'bg-[#092230] hover:bg-cyan-950 text-cyan-200 hover:text-white border-cyan-500/30'
-                        }`}
-                      >
-                        <Bell className={`w-3.5 h-3.5 ${isNotified ? 'fill-amber-300' : ''}`} />
-                        <span>{isNotified ? 'تم تفعيل التنبيه' : 'تنبيهي عند الإطلاق'}</span>
-                      </button>
+                      <span className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-600/40 text-slate-400">
+                        غير متاح بعد — لا يوجد نظام إشعارات فعلي
+                      </span>
                     )}
                   </div>
                 </div>
@@ -372,36 +336,6 @@ export const MoreServicesSection: React.FC<MoreServicesSectionProps> = ({
         )}
       </div>
 
-      {/* Confirmation Modal */}
-      {alertModalInfo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-sm bg-[#082231] border border-cyan-500/40 rounded-3xl p-5 shadow-2xl space-y-3">
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-cyan-400" />
-                <h3 className="font-bold text-sm">{alertModalInfo.title}</h3>
-              </div>
-              <button
-                onClick={() => setAlertModalInfo(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-slate-200 leading-relaxed">{alertModalInfo.message}</p>
-            <button
-              onClick={() => setAlertModalInfo(null)}
-              className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
-            >
-              حسناً، فهمت
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
